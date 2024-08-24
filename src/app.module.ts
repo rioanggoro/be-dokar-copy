@@ -1,19 +1,18 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
+import { RegisterEmployeeModule } from './register-employee/register-employee.module';
 import { EmployeeModule } from './employee/employee.module';
-
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { JwtModule } from '@nestjs/jwt';
+import { AuthService } from './auth/auth.service';
 
 @Module({
   imports: [
-    ThrottlerModule.forRoot({
-      ttl: 10, // Time to live in seconds
-      limit: 1, // Maximum number of requests within the TTL
-    } as any),
+    JwtModule.register({
+      secret: 'user321', // Gantilah dengan secret key yang lebih kuat
+      signOptions: { expiresIn: '1h' }, // JWT akan kadaluarsa setelah 1 jam
+    }),
     ConfigModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -29,15 +28,10 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
         synchronize: false,
       }),
     }),
+    RegisterEmployeeModule,
     EmployeeModule,
   ],
-  controllers: [AppController],
-  providers: [
-    AppService,
-    {
-      provide: 'APP_GUARD',
-      useClass: ThrottlerGuard,
-    },
-  ],
+  controllers: [],
+  providers: [AuthService],
 })
 export class AppModule {}

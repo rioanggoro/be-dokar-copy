@@ -1,10 +1,13 @@
-import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+// src/register-employee/dto/create-register-employee.dto.ts
+import { IsEmail, IsNotEmpty, IsString, IsNumber } from 'class-validator';
 
-export class CreateEmployeeDto {
+export class CreateRegisterEmployeeDto {
   @IsNotEmpty()
+  @IsNumber()
   id_company: number;
 
   @IsNotEmpty()
+  @IsNumber()
   id_employee: number;
 
   @IsEmail()
