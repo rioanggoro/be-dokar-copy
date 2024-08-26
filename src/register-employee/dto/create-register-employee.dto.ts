@@ -1,23 +1,33 @@
-// src/register-employee/dto/create-register-employee.dto.ts
-import { IsEmail, IsNotEmpty, IsString, IsNumber } from 'class-validator';
+import { IsString, IsEmail, IsNotEmpty, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+
+class GeneralInformationDto {
+  @IsString()
+  @IsNotEmpty()
+  user_idcard: string;
+
+  @IsString()
+  @IsNotEmpty()
+  user_religion: string;
+
+  // Field lain sesuai dengan entity GeneralInformation
+}
 
 export class CreateRegisterEmployeeDto {
+  @IsString()
   @IsNotEmpty()
-  @IsNumber()
-  id_company: number;
-
-  @IsNotEmpty()
-  @IsNumber()
-  id_employee: number;
+  user_name: string;
 
   @IsEmail()
   email: string;
 
-  @IsNotEmpty()
   @IsString()
+  @IsNotEmpty()
   password: string;
 
-  @IsNotEmpty()
-  @IsString()
-  telephone: string;
+  @ValidateNested()
+  @Type(() => GeneralInformationDto)
+  generalInformation: GeneralInformationDto;
+
+  // Field lain sesuai dengan entity Employee
 }

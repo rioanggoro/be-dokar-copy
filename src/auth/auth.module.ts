@@ -5,7 +5,7 @@ import { AuthService } from './auth.service';
 @Module({
   imports: [
     JwtModule.register({
-      secret: 'your-secret-key', // Gantilah dengan secret key yang lebih kuat
+      secret: '12345', // Gantilah dengan secret key yang lebih kuat
       signOptions: { expiresIn: '1h' },
     }),
   ],

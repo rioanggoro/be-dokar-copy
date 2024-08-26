@@ -9,6 +9,7 @@ import { AuthService } from './auth/auth.service';
 
 @Module({
   imports: [
+    ConfigModule.forRoot(), // Konfigurasi environment variables
     JwtModule.register({
       secret: 'user321', // Gantilah dengan secret key yang lebih kuat
       signOptions: { expiresIn: '1h' }, // JWT akan kadaluarsa setelah 1 jam

@@ -1,39 +1,39 @@
-import { Injectable, ConflictException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Employee } from 'src/employee/entities/employee.entity';
+import { EmployeeGeneralInformation } from 'src/employee/entities/employee-general-information.entity';
 import { CreateRegisterEmployeeDto } from './dto/create-register-employee.dto';
 
 @Injectable()
 export class RegisterEmployeeService {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    @InjectRepository(Employee)
+    private employeeRepository: Repository<Employee>,
 
-  private readonly employees = []; // Simulasi database
+    @InjectRepository(EmployeeGeneralInformation)
+    private generalInfoRepository: Repository<EmployeeGeneralInformation>,
+  ) {}
 
   async register(
     createRegisterEmployeeDto: CreateRegisterEmployeeDto,
-  ): Promise<any> {
-    const { email, id_employee } = createRegisterEmployeeDto;
+  ): Promise<Employee> {
+    const { generalInformation, ...employeeData } = createRegisterEmployeeDto;
 
-    // Cek apakah email sudah terdaftar
-    const existingEmployee = this.employees.find((emp) => emp.email === email);
-    if (existingEmployee) {
-      throw new ConflictException(
-        'Account is already registered, please use another account',
-      );
-    }
+    // Simpan data GeneralInformation terlebih dahulu
+    const newGeneralInfo =
+      this.generalInfoRepository.create(generalInformation);
+    const savedGeneralInfo =
+      await this.generalInfoRepository.save(newGeneralInfo);
 
-    // Simpan data karyawan ke database (saat ini hanya push ke array untuk simulasi)
-    this.employees.push(createRegisterEmployeeDto);
+    // Kemudian simpan data Employee, dengan relasi ke GeneralInformation
+    const newEmployee = this.employeeRepository.create({
+      ...employeeData,
+      generalInformation: savedGeneralInfo, // relasi dengan GeneralInformation
+    });
 
-    // Generate JWT token
-    const payload = { email, sub: id_employee }; // `sub` biasanya digunakan untuk menyimpan ID unik (misalnya ID karyawan)
-    const token = this.jwtService.sign(payload);
-
-    // Kembalikan response sukses beserta token
-    return {
-      statusCode: 200,
-      status: 'success',
-      message: 'Register successful',
-      token_auth: token,
-    };
+    // Menyimpan entitas Employee dan memeriksa jika return adalah array
+    const savedEmployee = await this.employeeRepository.save(newEmployee);
+    return Array.isArray(savedEmployee) ? savedEmployee[0] : savedEmployee;
   }
 }
