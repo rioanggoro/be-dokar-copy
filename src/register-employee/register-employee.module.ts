@@ -7,10 +7,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Employee } from 'src/employee/entities/employee.entity';
 import { EmployeeGeneralInformation } from 'src/employee/entities/employee-general-information.entity';
+import { CompanyModule } from 'src/company/company.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Employee, EmployeeGeneralInformation]),
+    CompanyModule,
     JwtModule.register({
       secret: 'user321', // Gantilah dengan secret key yang lebih kuat
       signOptions: { expiresIn: '1h' }, // JWT akan kadaluarsa setelah 1 jam

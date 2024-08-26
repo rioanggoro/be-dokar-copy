@@ -6,6 +6,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { EmployeeGeneralInformation } from './employee-general-information.entity';
+import { Company } from 'src/company/entities/company.entity';
 
 @Entity('employee')
 export class Employee {
@@ -24,9 +25,6 @@ export class Employee {
 
   @Column({ type: 'integer' })
   job_information_id: number;
-
-  @Column({ type: 'integer' })
-  company_id: number;
 
   @Column({ type: 'character varying', length: 100 })
   password: string;
@@ -48,4 +46,8 @@ export class Employee {
 
   @Column({ type: 'integer' })
   shift_attendance_id: number;
+
+  @ManyToOne(() => Company, (company) => company.employees)
+  @JoinColumn({ name: 'company_id' })
+  company: Company;
 }

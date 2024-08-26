@@ -6,6 +6,7 @@ import { RegisterEmployeeModule } from './register-employee/register-employee.mo
 import { EmployeeModule } from './employee/employee.module';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthService } from './auth/auth.service';
+import { CompanyModule } from './company/company.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { AuthService } from './auth/auth.service';
     }),
     RegisterEmployeeModule,
     EmployeeModule,
+    CompanyModule,
   ],
   controllers: [],
   providers: [AuthService],

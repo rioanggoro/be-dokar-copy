@@ -31,4 +31,5 @@ export class EmployeeGeneralInformation {
 
   @Column({ type: 'text' })
   user_address_domicile: string;
+  employees: any;
 }
