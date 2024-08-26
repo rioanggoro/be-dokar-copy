@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Employee } from 'src/employee/entities/employee.entity';
 import { EmployeeGeneralInformation } from 'src/employee/entities/employee-general-information.entity';
-import { Company } from 'src/company/entities/company.entity'; // Tambahkan import untuk Company
+import { Company } from 'src/company/entities/company.entity';
 import { CreateRegisterEmployeeDto } from './dto/create-register-employee.dto';
 
 @Injectable()
@@ -15,7 +15,7 @@ export class RegisterEmployeeService {
     @InjectRepository(EmployeeGeneralInformation)
     private readonly generalInfoRepository: Repository<EmployeeGeneralInformation>,
 
-    @InjectRepository(Company) // Tambahkan repository untuk Company
+    @InjectRepository(Company)
     private readonly companyRepository: Repository<Company>,
   ) {}
 
@@ -34,8 +34,10 @@ export class RegisterEmployeeService {
     }
 
     // Simpan data GeneralInformation terlebih dahulu
-    const newGeneralInfo =
-      this.generalInfoRepository.create(generalInformation);
+    const newGeneralInfo = this.generalInfoRepository.create({
+      ...generalInformation,
+      phone: employeeData.phone, // Pastikan phone dipetakan dengan benar ke GeneralInformation jika diperlukan
+    });
     const savedGeneralInfo =
       await this.generalInfoRepository.save(newGeneralInfo);
 
