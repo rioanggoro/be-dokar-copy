@@ -19,7 +19,7 @@ import { CompanyModule } from 'src/company/company.module';
     }),
     ThrottlerModule.forRoot({
       ttl: 10, // Time to live in seconds
-      limit: 8, // Maximum number of requests within the TTL
+      limit: 5, // Maximum number of requests within the TTL
     }),
   ],
   controllers: [RegisterEmployeeController],

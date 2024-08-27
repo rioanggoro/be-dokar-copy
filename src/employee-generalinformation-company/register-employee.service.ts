@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -32,8 +33,7 @@ export class RegisterEmployeeService {
     const { id_company, id_employee, email, password, telephone } =
       registerEmployeeDto;
 
-    // Validasi apakah semua field yang diperlukan ada
-
+    // Kondisi 400 - Bad Request
     const validation =
       !id_company || !id_employee || !email || !password || !telephone;
     if (validation) {
@@ -45,6 +45,23 @@ export class RegisterEmployeeService {
       });
     }
 
+    //KONDISI 401 MASIH BELUM ADA
+
+    // Kondisi 403 - Forbidden
+    const maxAllowedEmployees = 100; // Misalnya, batas maksimal karyawan di perusahaan  100
+    const employeeCount = await this.employeeRepository.count({
+      where: { company: { id_company } },
+    });
+
+    if (employeeCount >= maxAllowedEmployees) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        status: 'Forbidden',
+        message:
+          'The user cannot add another employee because the maximum allowed employees has been reached.',
+      });
+    }
+
     // Cek apakah id_company valid
     const company = await this.companyRepository.findOne({
       where: { id_company: id_company },
@@ -53,28 +70,34 @@ export class RegisterEmployeeService {
       throw new NotFoundException('Company not found');
     }
 
-    // Cek apakah email sudah terdaftar
+    // Kondisi 409-Conflict - Cek apakah email sudah terdaftar
     const existingEmployee = await this.employeeRepository.findOne({
       where: { email },
     });
 
     if (existingEmployee) {
       throw new InternalServerErrorException({
-        statusCode: 500,
+        statusCode: 409,
         status: 'Error',
         message: 'Account is already registered, please use another account',
       });
     }
 
-    // Cari employee berdasarkan id_company dan id_employee
+    // Kondisi 404 Not Found
+    //Cari employee berdasarkan id_company dan id_employee
     const employee = await this.employeeRepository.findOne({
       where: { company, id_employee },
       relations: ['generalInformation'],
     });
 
     if (!employee) {
-      throw new NotFoundException('Employee not found');
+      throw new NotFoundException({
+        statusCode: 404,
+        status: 'Not Found',
+        message: 'Employee not found',
+      });
     }
+    //Kondisi 429 - Too Many Requests Sudah ada di throttle
 
     // Update kolom-kolom yang ada pada tabel employee
     employee.email = email;
@@ -109,6 +132,14 @@ export class RegisterEmployeeService {
       message: 'Register successful',
       token_auth: token_auth,
     };
+  }
+  catch() {
+    // 500 Internal Server Error - Jika terjadi kesalahan saat menyimpan data
+    throw new InternalServerErrorException({
+      statusCode: 500,
+      status: 'Error',
+      message: 'Internal server error occurred while processing the request',
+    });
   }
 
   create(createEmployeeDto: CreateEmployeeDto) {
