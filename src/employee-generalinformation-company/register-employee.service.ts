@@ -72,7 +72,7 @@ export class RegisterEmployeeService {
 
     // Kondisi 409-Conflict - Cek apakah email sudah terdaftar
     const existingEmployee = await this.employeeRepository.findOne({
-      where: { email },
+      where: { email, password },
     });
 
     if (existingEmployee) {
@@ -99,6 +99,15 @@ export class RegisterEmployeeService {
     }
     //Kondisi 429 - Too Many Requests Sudah ada di throttle
 
+    //Kondisi 503	Service Unavailable - Server sedang gangguan
+    const serviceUnavailable = false;
+    if (serviceUnavailable) {
+      throw new InternalServerErrorException({
+        statusCode: 503,
+        status: 'Service Unavailable',
+        message: 'Server is down',
+      });
+    }
     // Update kolom-kolom yang ada pada tabel employee
     employee.email = email;
     employee.password = password;
