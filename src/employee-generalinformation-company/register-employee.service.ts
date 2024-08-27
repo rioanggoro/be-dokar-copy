@@ -8,7 +8,7 @@ import { UpdateEmployeeDto } from 'src/employee/dto/update-employee.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Employee } from 'src/employee/entities/employee.entity';
 import { Repository } from 'typeorm';
-import { EmployeeGeneralInformation } from 'src/employee_general_information/entities/employee-general-information.entity';
+import { EmployeeGeneralInformation } from 'src/general_information/entities/general_information.entity';
 import { CreateRegisterEmployeeDto } from 'src/employee-generalinformation-company/dto/create-register-employee.dto';
 import { Company } from 'src/company/entities/company.entity';
 import { JwtService } from '@nestjs/jwt';
@@ -39,18 +39,18 @@ export class RegisterEmployeeService {
       throw new NotFoundException('Company not found');
     }
 
-    // Cek apakah email sudah terdaftar
-    const existingEmployee = await this.employeeRepository.findOne({
-      where: { email },
-    });
+    // // Cek apakah email sudah terdaftar
+    // const existingEmployee = await this.employeeRepository.findOne({
+    //   where: { email },
+    // });
 
-    if (existingEmployee) {
-      throw new InternalServerErrorException({
-        statusCode: 500,
-        status: 'Error',
-        message: 'Account is already registered, please use another account',
-      });
-    }
+    // if (existingEmployee) {
+    //   throw new InternalServerErrorException({
+    //     statusCode: 500,
+    //     status: 'Error',
+    //     message: 'Account is already registered, please use another account',
+    //   });
+    // }
 
     // Cari employee berdasarkan id_company dan id_employee
     const employee = await this.employeeRepository.findOne({

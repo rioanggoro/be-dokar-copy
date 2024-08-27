@@ -1,7 +1,7 @@
 import { Employee } from 'src/employee/entities/employee.entity';
 import { Entity, Column, PrimaryGeneratedColumn, OneToOne } from 'typeorm';
 
-@Entity('employee_general_information')
+@Entity('general_information')
 export class EmployeeGeneralInformation {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id_general_information: number;

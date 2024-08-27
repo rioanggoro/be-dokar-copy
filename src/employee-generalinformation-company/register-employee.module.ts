@@ -6,7 +6,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Employee } from 'src/employee/entities/employee.entity';
-import { EmployeeGeneralInformation } from 'src/employee_general_information/entities/employee-general-information.entity';
+import { EmployeeGeneralInformation } from 'src/general_information/entities/general_information.entity';
 import { CompanyModule } from 'src/company/company.module';
 
 @Module({

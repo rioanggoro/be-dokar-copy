@@ -8,7 +8,7 @@ import {
   OneToOne,
   ManyToOne,
 } from 'typeorm';
-import { EmployeeGeneralInformation } from '../../employee_general_information/entities/employee-general-information.entity';
+import { EmployeeGeneralInformation } from '../../general_information/entities/general_information.entity';
 import { Company } from 'src/company/entities/company.entity';
 
 @Entity('employee')
