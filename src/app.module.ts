@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
-import { RegisterEmployeeModule } from './register-employee/register-employee.module';
+import { RegisterEmployeeModule } from './employee-generalinformation-company/register-employee.module';
 import { EmployeeModule } from './employee/employee.module';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthService } from './auth/auth.service';

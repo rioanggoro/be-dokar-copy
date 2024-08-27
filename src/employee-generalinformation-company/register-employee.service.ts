@@ -9,7 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Employee } from 'src/employee/entities/employee.entity';
 import { Repository } from 'typeorm';
 import { EmployeeGeneralInformation } from 'src/employee_general_information/entities/employee-general-information.entity';
-import { CreateRegisterEmployeeDto } from 'src/register-employee/dto/create-register-employee.dto';
+import { CreateRegisterEmployeeDto } from 'src/employee-generalinformation-company/dto/create-register-employee.dto';
 import { Company } from 'src/company/entities/company.entity';
 import { JwtService } from '@nestjs/jwt';
 
