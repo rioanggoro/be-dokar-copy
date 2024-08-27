@@ -1,11 +1,14 @@
+//Entity untuk merelasikan tabel tabel
+
 import {
   Entity,
   Column,
   PrimaryGeneratedColumn,
-  ManyToOne,
   JoinColumn,
+  OneToOne,
+  ManyToOne,
 } from 'typeorm';
-import { EmployeeGeneralInformation } from './employee-general-information.entity';
+import { EmployeeGeneralInformation } from '../../employee_general_information/entities/employee-general-information.entity';
 import { Company } from 'src/company/entities/company.entity';
 
 @Entity('employee')
@@ -16,15 +19,18 @@ export class Employee {
   @Column({ type: 'integer' })
   personal_information_id: number;
 
-  @ManyToOne(
-    () => EmployeeGeneralInformation,
-    (generalInformation) => generalInformation.id_general_information,
-  )
+  // 1 employee have 1 employee general information
+  @OneToOne(() => EmployeeGeneralInformation, { cascade: true })
   @JoinColumn({ name: 'general_information_id' })
   generalInformation: EmployeeGeneralInformation;
 
   @Column({ type: 'integer' })
   job_information_id: number;
+
+  // banyak karyawan di 1 perusahaan
+  @ManyToOne(() => Company, (company) => company.employees)
+  @JoinColumn({ name: 'company_id' })
+  company: Company;
 
   @Column({ type: 'character varying', length: 100 })
   password: string;
@@ -46,8 +52,4 @@ export class Employee {
 
   @Column({ type: 'integer' })
   shift_attendance_id: number;
-
-  @ManyToOne(() => Company, (company) => company.employees)
-  @JoinColumn({ name: 'company_id' })
-  company: Company;
 }

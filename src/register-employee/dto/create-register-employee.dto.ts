@@ -1,30 +1,16 @@
-import {
-  IsString,
-  IsEmail,
-  IsNotEmpty,
-  ValidateNested,
-  IsNumber,
-} from 'class-validator';
-import { Type } from 'class-transformer';
-
-class GeneralInformationDto {
-  @IsString()
-  @IsNotEmpty()
-  user_idcard: string;
-
-  @IsString()
-  @IsNotEmpty()
-  user_religion: string;
-
-  // Field lain sesuai dengan entity GeneralInformation
-}
+import { IsEmail, IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
 export class CreateRegisterEmployeeDto {
   @IsNumber()
   @IsNotEmpty()
   id_company: number;
 
+  @IsNumber()
+  @IsNotEmpty()
+  id_employee: number;
+
   @IsEmail()
+  @IsNotEmpty()
   email: string;
 
   @IsString()
@@ -33,9 +19,5 @@ export class CreateRegisterEmployeeDto {
 
   @IsString()
   @IsNotEmpty()
-  phone: string;
-
-  @ValidateNested()
-  @Type(() => GeneralInformationDto)
-  generalInformation: GeneralInformationDto;
+  telephone: string;
 }

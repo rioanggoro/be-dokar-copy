@@ -1,4 +1,5 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Employee } from 'src/employee/entities/employee.entity';
+import { Entity, Column, PrimaryGeneratedColumn, OneToOne } from 'typeorm';
 
 @Entity('employee_general_information')
 export class EmployeeGeneralInformation {
@@ -32,4 +33,7 @@ export class EmployeeGeneralInformation {
   @Column({ type: 'text' })
   user_address_domicile: string;
   employees: any;
+
+  @OneToOne(() => Employee, (employee) => employee.generalInformation)
+  employee: Employee;
 }

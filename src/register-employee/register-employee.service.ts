@@ -1,106 +1,119 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Employee } from 'src/employee/entities/employee.entity';
-import { EmployeeGeneralInformation } from 'src/employee/entities/employee-general-information.entity';
-import { Company } from 'src/company/entities/company.entity';
-import { CreateRegisterEmployeeDto } from './dto/create-register-employee.dto';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
+import { CreateEmployeeDto } from 'src/employee/dto/create-employee.dto';
 import { UpdateEmployeeDto } from 'src/employee/dto/update-employee.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Employee } from 'src/employee/entities/employee.entity';
+import { Repository } from 'typeorm';
+import { EmployeeGeneralInformation } from 'src/employee_general_information/entities/employee-general-information.entity';
+import { CreateRegisterEmployeeDto } from 'src/register-employee/dto/create-register-employee.dto';
+import { Company } from 'src/company/entities/company.entity';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class RegisterEmployeeService {
   constructor(
     @InjectRepository(Employee)
-    private readonly employeeRepository: Repository<Employee>,
-
+    private employeeRepository: Repository<Employee>,
     @InjectRepository(EmployeeGeneralInformation)
-    private readonly generalInfoRepository: Repository<EmployeeGeneralInformation>,
-
+    private generalInformationRepository: Repository<EmployeeGeneralInformation>,
     @InjectRepository(Company)
-    private readonly companyRepository: Repository<Company>,
+    private companyRepository: Repository<Company>,
+    private jwtService: JwtService, // Injeksi JwtService
   ) {}
 
-  // Metode untuk registrasi karyawan baru
-  async register(
-    createRegisterEmployeeDto: CreateRegisterEmployeeDto,
-  ): Promise<Employee> {
-    const { id_company, generalInformation, ...employeeData } =
-      createRegisterEmployeeDto;
+  async registerEmployee(
+    registerEmployeeDto: CreateRegisterEmployeeDto,
+  ): Promise<any> {
+    const { id_company, id_employee, email, password, telephone } =
+      registerEmployeeDto;
 
-    // Cari Company berdasarkan id_company
+    // Cek apakah id_company valid
     const company = await this.companyRepository.findOne({
-      where: { id_company },
+      where: { id_company: id_company },
     });
     if (!company) {
-      throw new NotFoundException(`Company with ID ${id_company} not found`);
+      throw new NotFoundException('Company not found');
     }
 
-    // Simpan data GeneralInformation terlebih dahulu
-    const newGeneralInfo = this.generalInfoRepository.create({
-      ...generalInformation,
-      phone: employeeData.phone, // Pastikan phone dipetakan dengan benar ke GeneralInformation jika diperlukan
-    });
-    const savedGeneralInfo =
-      await this.generalInfoRepository.save(newGeneralInfo);
-
-    // Kemudian simpan data Employee, dengan relasi ke GeneralInformation dan Company
-    const newEmployee = this.employeeRepository.create({
-      ...employeeData,
-      generalInformation: savedGeneralInfo, // Relasi dengan GeneralInformation
-      company: company, // Relasi dengan Company
+    // Cek apakah email sudah terdaftar
+    const existingEmployee = await this.employeeRepository.findOne({
+      where: { email },
     });
 
-    // Menyimpan entitas Employee dan mengembalikan hasilnya
-    return await this.employeeRepository.save(newEmployee);
+    if (existingEmployee) {
+      throw new InternalServerErrorException({
+        statusCode: 500,
+        status: 'Error',
+        message: 'Account is already registered, please use another account',
+      });
+    }
+
+    // Cari employee berdasarkan id_company dan id_employee
+    const employee = await this.employeeRepository.findOne({
+      where: { company, id_employee },
+      relations: ['generalInformation'],
+    });
+
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    // Update kolom-kolom yang ada pada tabel employee
+    employee.email = email;
+    employee.password = password;
+    employee.company = company; // Assign company
+
+    // Pastikan generalInformation tidak undefined
+    if (!employee.generalInformation) {
+      throw new NotFoundException(
+        'General Information not found for this employee',
+      );
+    }
+
+    // Update general_information table
+    employee.generalInformation.phone = telephone;
+
+    // Simpan perubahan
+    await this.employeeRepository.save(employee);
+    await this.generalInformationRepository.save(employee.generalInformation);
+
+    // Generate JWT token
+    const payload = { email: employee.email, sub: employee.id_employee };
+    const token_auth = await this.jwtService.signAsync(payload);
+
+    employee.token_auth = token_auth;
+    await this.employeeRepository.save(employee);
+
+    // Mengembalikan response sukses beserta token
+    return {
+      statusCode: 200,
+      status: 'success',
+      message: 'Register successful',
+      token_auth: token_auth,
+    };
   }
 
-  // Metode untuk memperbarui data karyawan yang sudah ada
-  async update(
-    id: number,
-    updateEmployeeDto: UpdateEmployeeDto,
-  ): Promise<Employee> {
-    // Cari Employee berdasarkan ID
-    const employee = await this.employeeRepository.findOne({
-      where: { id_employee: id },
-    });
-    if (!employee) {
-      throw new NotFoundException(`Employee with ID ${id} not found`);
-    }
+  create(createEmployeeDto: CreateEmployeeDto) {
+    return 'This action adds a new employee';
+  }
 
-    // Update data Employee dengan informasi baru
-    Object.assign(employee, updateEmployeeDto);
+  findAll() {
+    return `This action returns all employee`;
+  }
 
-    // Jika ada perubahan pada company, cari dan update relasi dengan company
-    if (updateEmployeeDto.id_company) {
-      const company = await this.companyRepository.findOne({
-        where: { id_company: updateEmployeeDto.id_company },
-      });
-      if (!company) {
-        throw new NotFoundException(
-          `Company with ID ${updateEmployeeDto.id_company} not found`,
-        );
-      }
-      employee.company = company;
-    }
+  findOne(id: number) {
+    return `This action returns a #${id} employee`;
+  }
 
-    // Jika ada perubahan pada generalInformation, cari dan update relasi dengan generalInformation
-    if (updateEmployeeDto.generalInformation) {
-      const generalInfoEntity = await this.generalInfoRepository.findOne({
-        where: {
-          id_general_information:
-            employee.generalInformation.id_general_information,
-        },
-      });
-      if (!generalInfoEntity) {
-        throw new NotFoundException(
-          `General Information with ID ${employee.generalInformation.id_general_information} not found`,
-        );
-      }
-      Object.assign(generalInfoEntity, updateEmployeeDto.generalInformation);
-      await this.generalInfoRepository.save(generalInfoEntity);
-    }
+  update(id: number, updateEmployeeDto: UpdateEmployeeDto) {
+    return `This action updates a #${id} employee`;
+  }
 
-    // Simpan perubahan dan kembalikan hasilnya
-    return this.employeeRepository.save(employee);
+  remove(id: number) {
+    return `This action removes a #${id} employee`;
   }
 }

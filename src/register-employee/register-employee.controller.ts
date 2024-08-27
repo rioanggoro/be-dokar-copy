@@ -8,10 +8,12 @@ export class RegisterEmployeeController {
   constructor(
     private readonly registerEmployeeService: RegisterEmployeeService,
   ) {}
-
+  //Method Post yang diambil dari RegisterEmployeeService
   @Post()
   async register(@Body() createRegisterEmployeeDto: CreateRegisterEmployeeDto) {
-    return this.registerEmployeeService.register(createRegisterEmployeeDto);
+    return this.registerEmployeeService.registerEmployee(
+      createRegisterEmployeeDto,
+    );
   }
 
   @Patch(':id')
