@@ -38,6 +38,4 @@ export class CreateRegisterEmployeeDto {
   @ValidateNested()
   @Type(() => GeneralInformationDto)
   generalInformation: GeneralInformationDto;
-
-  // Field lain sesuai dengan entity Employee
 }
