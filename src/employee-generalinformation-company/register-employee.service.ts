@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -31,6 +32,19 @@ export class RegisterEmployeeService {
     const { id_company, id_employee, email, password, telephone } =
       registerEmployeeDto;
 
+    // Validasi apakah semua field yang diperlukan ada
+
+    const validation =
+      !id_company || !id_employee || !email || !password || !telephone;
+    if (validation) {
+      throw new BadRequestException({
+        statusCode: 400,
+        status: 'Bad Request',
+        message:
+          'The request does not have the required fields, or the fields the request has are invalid in some way.',
+      });
+    }
+
     // Cek apakah id_company valid
     const company = await this.companyRepository.findOne({
       where: { id_company: id_company },
@@ -39,18 +53,18 @@ export class RegisterEmployeeService {
       throw new NotFoundException('Company not found');
     }
 
-    // // Cek apakah email sudah terdaftar
-    // const existingEmployee = await this.employeeRepository.findOne({
-    //   where: { email },
-    // });
+    // Cek apakah email sudah terdaftar
+    const existingEmployee = await this.employeeRepository.findOne({
+      where: { email },
+    });
 
-    // if (existingEmployee) {
-    //   throw new InternalServerErrorException({
-    //     statusCode: 500,
-    //     status: 'Error',
-    //     message: 'Account is already registered, please use another account',
-    //   });
-    // }
+    if (existingEmployee) {
+      throw new InternalServerErrorException({
+        statusCode: 500,
+        status: 'Error',
+        message: 'Account is already registered, please use another account',
+      });
+    }
 
     // Cari employee berdasarkan id_company dan id_employee
     const employee = await this.employeeRepository.findOne({
