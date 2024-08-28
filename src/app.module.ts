@@ -7,6 +7,8 @@ import { join } from 'path';
 import { EmployeeModule } from './employee/employee.module';
 
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { CompanyModule } from './company/company.module';
+import { EmployeeJobinformationCompanyModule } from './employee-jobinformation-company/employee-jobinformation-company.module';
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
       }),
     }),
     EmployeeModule,
+    CompanyModule,
+    EmployeeJobinformationCompanyModule,
   ],
   controllers: [AppController],
   providers: [
