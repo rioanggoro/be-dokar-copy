@@ -5,16 +5,15 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
 import { EmployeeModule } from './employee/employee.module';
-
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { CompanyModule } from './company/company.module';
-import { EmployeeJobinformationCompanyModule } from './employee-jobinformation-company/employee-jobinformation-company.module';
+import { JobInformationModule } from 'src/job_information/job_information.module';
 
 @Module({
   imports: [
     ThrottlerModule.forRoot({
       ttl: 10, // Time to live in seconds
-      limit: 1, // Maximum number of requests within the TTL
+      limit: 60, // Maximum number of requests within the TTL
     } as any),
     ConfigModule.forRoot(),
     TypeOrmModule.forRootAsync({
@@ -28,12 +27,12 @@ import { EmployeeJobinformationCompanyModule } from './employee-jobinformation-c
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_NAME'),
         entities: [join(process.cwd(), 'dist/**/*.entity.js')],
-        synchronize: false,
+        synchronize: false, // Set true in development to auto-sync schema
       }),
     }),
     EmployeeModule,
     CompanyModule,
-    EmployeeJobinformationCompanyModule,
+    JobInformationModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,7 +1,7 @@
 import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { Employee } from 'src/employee/entities/employee.entity';
 
-//Entity untuk merelasikan tabel company
+//Entity untuk merelasikan tabel tabel
 
 @Entity('company')
 export class Company {
