@@ -1,4 +1,4 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException, InternalServerErrorException } from '@nestjs/common';
+import { ExceptionFilter, Catch, ArgumentsHost, HttpException, InternalServerErrorException, HttpStatus } from '@nestjs/common';
 import { Request, Response } from 'express';
 
 @Catch()
@@ -21,11 +21,29 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     response.status(status).json({
       statusCode: status,
-      status: status === 500 ? 'Internal Server Error' : 'Error',
+      status: this.getStatusMessage(status),
+      // status: status === 500 ? 'Internal Server Error' : 'Error',
       message: typeof exceptionResponse === 'string' ? exceptionResponse : (exceptionResponse as any).message,
       // Optional: You may include the request path or timestamp if needed
       // path: request.url,
       // timestamp: new Date().toISOString(),
     });
+  }
+
+  private getStatusMessage(status: number): string {
+    switch (status) {
+      case HttpStatus.BAD_REQUEST:
+        return 'Bad Request';
+      case HttpStatus.UNAUTHORIZED:
+        return 'Unauthorized';
+      case HttpStatus.FORBIDDEN:
+        return 'Forbidden';
+      case HttpStatus.NOT_FOUND:
+        return 'Not Found';
+      case HttpStatus.INTERNAL_SERVER_ERROR:
+        return 'Internal Server Error';
+      default:
+        return 'Error';
+    }
   }
 }

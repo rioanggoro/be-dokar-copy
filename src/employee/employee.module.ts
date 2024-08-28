@@ -22,8 +22,8 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
       
     }),
     ThrottlerModule.forRoot({
-      ttl: 60, // Waktu dalam detik untuk mempertahankan hit
-      limit: 10, // Jumlah maksimal permintaan yang diizinkan dalam ttl
+      ttl: 0, // Waktu dalam detik untuk mempertahankan hit
+      limit: 0, // Jumlah maksimal permintaan yang diizinkan dalam ttl
     })
   ],
   controllers: [EmployeeController],
