@@ -22,9 +22,6 @@ export class Employee {
   @Column({ type: 'integer' })
   general_information_id: number;
 
-  @Column({ type: 'integer' })
-  job_information_id: number;
-
   @OneToOne(() => EmployeeJobInformation, { cascade: true })
   @JoinColumn({ name: 'job_information_id' })
   jobInformation: EmployeeJobInformation;
