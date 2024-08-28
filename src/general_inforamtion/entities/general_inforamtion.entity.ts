@@ -2,8 +2,8 @@ import { Employee } from 'src/employee/entities/employee.entity';
 import { Entity, Column, PrimaryGeneratedColumn, OneToOne } from 'typeorm';
 
 @Entity('general_information')
-export class EmployeeGeneralInformation {
-  @PrimaryGeneratedColumn('increment', { type: 'bigint' })
+export class GeneralInforamtion {
+     @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id_general_information: number;
 
   @Column({ type: 'character varying', length: 20 })

@@ -1,6 +1,6 @@
-import { IsEmail, IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsNumber, IsString } from "class-validator";
 
-export class CreateRegisterEmployeeDto {
+export class RegisterEmployeeDto {
   @IsNumber()
   @IsNotEmpty()
   id_company: number;

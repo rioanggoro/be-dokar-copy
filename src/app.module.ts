@@ -2,21 +2,13 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
-import { RegisterEmployeeModule } from './employee-generalinformation-company/register-employee.module';
 import { EmployeeModule } from './employee/employee.module';
-import { JwtModule } from '@nestjs/jwt';
-import { AuthService } from './auth/auth.service';
 import { CompanyModule } from './company/company.module';
-import { GeneralInformationModule } from 'src/general_information/general_information.module';
+import { GeneralInforamtionModule } from './general_inforamtion/general_inforamtion.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot(), // Konfigurasi environment variables
-    JwtModule.register({
-      secret: 'user321', // Gantilah dengan secret key yang lebih kuat
-      signOptions: { expiresIn: '1h' }, // JWT akan kadaluarsa setelah 1 jam
-    }),
-    ConfigModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -31,12 +23,11 @@ import { GeneralInformationModule } from 'src/general_information/general_inform
         synchronize: false,
       }),
     }),
-    RegisterEmployeeModule,
     EmployeeModule,
     CompanyModule,
-    GeneralInformationModule,
+    GeneralInforamtionModule,
   ],
   controllers: [],
-  providers: [AuthService],
+  providers: [],
 })
 export class AppModule {}

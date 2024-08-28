@@ -8,8 +8,8 @@ import {
   OneToOne,
   ManyToOne,
 } from 'typeorm';
-import { EmployeeGeneralInformation } from '../../general_information/entities/general_information.entity';
 import { Company } from 'src/company/entities/company.entity';
+import { GeneralInforamtion } from 'src/general_inforamtion/entities/general_inforamtion.entity';
 
 @Entity('employee')
 export class Employee {
@@ -20,9 +20,9 @@ export class Employee {
   personal_information_id: number;
 
   // 1 employee have 1 employee general information
-  @OneToOne(() => EmployeeGeneralInformation, { cascade: true })
+  @OneToOne(() => GeneralInforamtion, { cascade: true })
   @JoinColumn({ name: 'general_information_id' })
-  generalInformation: EmployeeGeneralInformation;
+  generalInformation: GeneralInforamtion;
 
   @Column({ type: 'integer' })
   job_information_id: number;
