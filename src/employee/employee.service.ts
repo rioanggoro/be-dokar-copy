@@ -91,7 +91,7 @@ export class EmployeeService {
 
     // Mengembalikan response sukses beserta token
     return {
-      statusCode: 200,
+      statusCode: 201,
       status: 'success',
       message: 'Register successful',
       token_auth: token_auth,

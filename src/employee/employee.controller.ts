@@ -11,7 +11,7 @@ export class EmployeeController {
   constructor(private readonly employeeService: EmployeeService) {}
 
   @UseGuards(ThrottlerGuard)
-  @Throttle(3, 60) // udah berdasarkan ip user
+  @Throttle(5, 60) // udah berdasarkan ip user
   @Post('register')
   async register(@Body() registerEmployeeDto: RegisterEmployeeDto) {
     return this.employeeService.registerEmployee(registerEmployeeDto);
