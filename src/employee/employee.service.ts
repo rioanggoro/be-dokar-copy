@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  UseFilters,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Employee } from './entities/employee.entity';
@@ -6,8 +11,10 @@ import { JobInformation } from 'src/job_information/entities/job_information.ent
 import { Company } from 'src/company/entities/company.entity';
 import { JwtService } from '@nestjs/jwt';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
+import { HttpExceptionFilter } from 'src/shared/filters/exception.filter';
 
 @Injectable()
+@UseFilters(HttpExceptionFilter)
 export class EmployeeService {
   constructor(
     @InjectRepository(Employee)
@@ -29,7 +36,14 @@ export class EmployeeService {
     });
 
     if (!employee || employee.password !== password) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+          status: 'Error',
+          message: 'Invalid username or password',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
 
     // Buat token JWT
@@ -37,10 +51,6 @@ export class EmployeeService {
       id: employee.id_employee,
       email: employee.email,
     });
-    // const token_device = this.jwtService.sign({
-    //   id: employee.id_employee,
-    //   device: 'device_info',
-    // }); // Optional, bisa diisi sesuai dengan kebutuhan
 
     return {
       statusCode: 200,

@@ -5,16 +5,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
 import { EmployeeModule } from './employee/employee.module';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { CompanyModule } from './company/company.module';
 import { JobInformationModule } from 'src/job_information/job_information.module';
 
 @Module({
   imports: [
-    ThrottlerModule.forRoot({
-      ttl: 10, // Time to live in seconds
-      limit: 60, // Maximum number of requests within the TTL
-    } as any),
     ConfigModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -35,12 +30,6 @@ import { JobInformationModule } from 'src/job_information/job_information.module
     JobInformationModule,
   ],
   controllers: [AppController],
-  providers: [
-    AppService,
-    {
-      provide: 'APP_GUARD',
-      useClass: ThrottlerGuard,
-    },
-  ],
+  providers: [AppService],
 })
 export class AppModule {}
