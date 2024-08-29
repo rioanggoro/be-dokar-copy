@@ -1,7 +1,6 @@
 import {
-  HttpException,
-  HttpStatus,
   Injectable,
+  InternalServerErrorException,
   UseFilters,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,6 +11,7 @@ import { Company } from 'src/company/entities/company.entity';
 import { JwtService } from '@nestjs/jwt';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { HttpExceptionFilter } from 'src/shared/filters/exception.filter';
+import { comparePassword } from 'src/shared/utils/hash.util';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -35,15 +35,15 @@ export class EmployeeService {
       relations: ['jobInformation', 'company'],
     });
 
-    if (!employee || employee.password !== password) {
-      throw new HttpException(
-        {
-          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-          status: 'Error',
-          message: 'Invalid username or password',
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+    if (!employee) {
+      throw new InternalServerErrorException('Invalid username or password');
+    }
+
+    // Periksa password
+    const isPasswordValid = await comparePassword(password, employee.password);
+
+    if (!isPasswordValid) {
+      throw new InternalServerErrorException('Invalid username or password');
     }
 
     // Buat token JWT
