@@ -8,13 +8,21 @@ import { Company } from 'src/company/entities/company.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
+    ConfigModule.forRoot(),
     TypeOrmModule.forFeature([JobInformation, Employee, Company]),
-    JwtModule.register({
-      secret: 'your_secret_key', // Ganti dengan kunci rahasia Anda
-      signOptions: { expiresIn: '1h' }, // Waktu kedaluwarsa token
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: {
+          expiresIn: configService.get<string>('JWT_EXPIRES_IN'),
+        },
+      }),
     }),
     ThrottlerModule.forRoot({
       ttl: 0, // Waktu dalam detik untuk mempertahankan hit
