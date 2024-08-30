@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { EmployeeService } from './employee.service';
-import { EmployeeController } from './employee.controller';
+import { EmployeeController } from 'src/employee/employee.controller';
 import { PermissionAttendance } from 'src/permission_attendance/entities/permission_attendance.entity';
 import { Employee } from './entities/employee.entity';
 import { ConfigModule, ConfigService } from '@nestjs/config';

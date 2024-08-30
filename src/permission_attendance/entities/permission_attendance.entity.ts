@@ -1,4 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Employee } from 'src/employee/entities/employee.entity';
 
 @Entity('permission_attendance')
@@ -13,5 +19,6 @@ export class PermissionAttendance {
   proof_of_attendance: string;
 
   @ManyToOne(() => Employee, (employee) => employee.permissionAttendances)
+  @JoinColumn({ name: 'employee_id' })
   employee: Employee;
 }

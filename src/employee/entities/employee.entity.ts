@@ -10,7 +10,7 @@ export class Employee {
   token_auth: string;
 
   @Column({ type: 'varchar', length: 100 })
-  user_name: string;
+  employee_name: string;
 
   @Column({ type: 'varchar', length: 100 })
   email: string;
@@ -19,7 +19,7 @@ export class Employee {
   password: string;
 
   @Column({ type: 'text' })
-  photo: string;
+  employee_photo: string;
 
   @Column({ type: 'text' })
   token_device: string;
