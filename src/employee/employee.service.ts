@@ -1,12 +1,14 @@
 import {
   Injectable,
-  HttpException,
-  HttpStatus,
   BadRequestException,
   NotFoundException,
+  UnauthorizedException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { JwtService } from '@nestjs/jwt';
 import { Employee } from './entities/employee.entity';
 import { PermissionAttendance } from 'src/permission_attendance/entities/permission_attendance.entity';
 
@@ -17,10 +19,12 @@ export class EmployeeService {
     private employeeRepository: Repository<Employee>,
     @InjectRepository(PermissionAttendance)
     private permissionAttendanceRepository: Repository<PermissionAttendance>,
+    private jwtService: JwtService,
   ) {}
 
   async createPermissionAttendance(
     id_employee: number,
+    token_auth: string, // Tambahkan parameter token_auth
     description: string,
     proof_of_attendance: string,
   ): Promise<any> {
@@ -29,11 +33,26 @@ export class EmployeeService {
       if (!id_employee) {
         throw new BadRequestException('Employee ID is required');
       }
+      if (!token_auth) {
+        throw new UnauthorizedException('Token auth is required');
+      }
       if (!description) {
         throw new BadRequestException('Description is required');
       }
       if (!proof_of_attendance) {
         throw new BadRequestException('Proof of attendance is required');
+      }
+
+      // Verifikasi token auth
+      let decoded;
+      try {
+        decoded = this.jwtService.verify(token_auth);
+      } catch (error) {
+        throw new UnauthorizedException('Invalid token');
+      }
+
+      if (!decoded || !decoded.sub) {
+        throw new UnauthorizedException('Invalid token payload');
       }
 
       // Cari employee berdasarkan id
@@ -64,7 +83,8 @@ export class EmployeeService {
     } catch (error) {
       if (
         error instanceof BadRequestException ||
-        error instanceof NotFoundException
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
       ) {
         throw error;
       }
