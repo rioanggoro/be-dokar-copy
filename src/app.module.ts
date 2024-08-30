@@ -1,10 +1,14 @@
 import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
 import { EmployeeModule } from './employee/employee.module';
 import { CompanyModule } from './company/company.module';
+import { JobInformationModule } from 'src/job_information/job_information.module';
 import { GeneralInforamtionModule } from './general_inforamtion/general_inforamtion.module';
+
 
 @Module({
   imports: [
@@ -20,14 +24,15 @@ import { GeneralInforamtionModule } from './general_inforamtion/general_inforamt
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_NAME'),
         entities: [join(process.cwd(), 'dist/**/*.entity.js')],
-        synchronize: false,
+        synchronize: false, // Set true in development to auto-sync schema
       }),
     }),
     EmployeeModule,
     CompanyModule,
     GeneralInforamtionModule,
+    JobInformationModule,
   ],
-  controllers: [],
-  providers: [],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

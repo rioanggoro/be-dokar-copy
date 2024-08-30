@@ -1,19 +1,25 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException, InternalServerErrorException, HttpStatus } from '@nestjs/common';
-import { Request, Response } from 'express';
+import {
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+  HttpException,
+  InternalServerErrorException,
+  HttpStatus,
+} from '@nestjs/common';
+import { Response } from 'express';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   catch(exception: any, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
-    let status = (exception instanceof HttpException)
-      ? exception.getStatus()
-      : 500;
+    const status =
+      exception instanceof HttpException ? exception.getStatus() : 500;
 
-    const exceptionResponse = (exception instanceof HttpException)
-      ? exception.getResponse()
-      : { message: exception.message };
+    const exceptionResponse =
+      exception instanceof HttpException
+        ? exception.getResponse()
+        : { message: exception.message };
 
     if (!(exception instanceof HttpException)) {
       exception = new InternalServerErrorException(exception.message);
@@ -21,12 +27,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     response.status(status).json({
       statusCode: status,
-      status: this.getStatusMessage(status),
-      // status: status === 500 ? 'Internal Server Error' : 'Error',
-      message: typeof exceptionResponse === 'string' ? exceptionResponse : (exceptionResponse as any).message,
-      // Optional: You may include the request path or timestamp if needed
-      // path: request.url,
-      // timestamp: new Date().toISOString(),
+      // status: this.getStatusMessage(status),
+      status: status === 500 ? 'Internal Server Error' : 'Error',
+      message:
+        typeof exceptionResponse === 'string'
+          ? exceptionResponse
+          : (exceptionResponse as any).message,
     });
   }
 

@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { Company } from 'src/company/entities/company.entity';
 import { GeneralInforamtion } from 'src/general_inforamtion/entities/general_inforamtion.entity';
+import { JobInformation } from 'src/job_information/entities/job_information.entity';
 
 @Entity('employee')
 export class Employee {
@@ -24,8 +25,15 @@ export class Employee {
   @JoinColumn({ name: 'general_information_id' })
   generalInformation: GeneralInforamtion;
 
-  @Column({ type: 'integer' })
-  job_information_id: number;
+  @OneToOne(
+    () => JobInformation,
+    (jobInformation) => jobInformation.id_job_information,
+    {
+      cascade: true,
+    },
+  )
+  @JoinColumn({ name: 'job_information_id' })
+  jobInformation: JobInformation;
 
   // banyak karyawan di 1 perusahaan
   @ManyToOne(() => Company, (company) => company.employees)

@@ -6,6 +6,9 @@ export function hashPassword(password: string): Promise<string> {
 }
 
 // Fungsi untuk memverifikasi password yang diinput dengan hash yang tersimpan
-export function comparePassword(password: string, hash: string): Promise<boolean> {
+export function comparePassword(
+  password: string,
+  hash: string,
+): Promise<boolean> {
   return bcrypt.compare(password, hash);
 }

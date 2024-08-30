@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
 // Digunakan untuk memverifiaksi apakah user terautentikasi dengan token yang benar atau tidak
@@ -11,7 +16,9 @@ export class AuthGuard implements CanActivate {
     const user = request.user;
 
     if (!user) {
-      throw new UnauthorizedException('You are not authorized to access this resource');
+      throw new UnauthorizedException(
+        'You are not authorized to access this resource',
+      );
     }
 
     return true;
