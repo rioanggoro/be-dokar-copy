@@ -18,11 +18,10 @@ export class EmployeeService {
     private permissionAttendanceRepository: Repository<PermissionAttendance>,
   ) {}
 
-  // Method untuk permission attendance
   async createPermissionAttendance(
     id_employee: number,
     description: string,
-    proof_of_attendance: string,
+    proof_of_attendance: string, // Pastikan nama kunci ini benar
   ): Promise<any> {
     try {
       // Cari employee berdasarkan id
@@ -48,7 +47,6 @@ export class EmployeeService {
         message: 'successfully sent permission attendance',
       };
     } catch (error) {
-      console.log(error);
       throw new HttpException(
         {
           statusCode: HttpStatus.INTERNAL_SERVER_ERROR,

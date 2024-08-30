@@ -14,5 +14,5 @@ export class CreateEmployeeDto {
 
   @IsString()
   @IsNotEmpty()
-  proof_of_attendace: string;
+  proof_of_attendance: string;
 }
