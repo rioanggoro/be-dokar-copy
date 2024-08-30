@@ -1,8 +1,9 @@
 import {
   Injectable,
-  InternalServerErrorException,
   HttpException,
   HttpStatus,
+  BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -21,16 +22,31 @@ export class EmployeeService {
   async createPermissionAttendance(
     id_employee: number,
     description: string,
-    proof_of_attendance: string, // Pastikan nama kunci ini benar
+    proof_of_attendance: string,
   ): Promise<any> {
     try {
+      // Validasi input
+      if (!id_employee) {
+        throw new BadRequestException('Employee ID is required');
+      }
+      if (!description) {
+        throw new BadRequestException('Description is required');
+      }
+      if (!proof_of_attendance) {
+        throw new BadRequestException('Proof of attendance is required');
+      }
+
       // Cari employee berdasarkan id
       const employee = await this.employeeRepository.findOne({
         where: { id_employee },
       });
 
       if (!employee) {
-        throw new InternalServerErrorException('Employee not found');
+        throw new NotFoundException({
+          statusCode: HttpStatus.NOT_FOUND,
+          status: 'Error',
+          message: 'Employee not found',
+        });
       }
 
       // Simpan permission attendance
@@ -40,13 +56,18 @@ export class EmployeeService {
       permissionAttendance.employee = employee;
 
       await this.permissionAttendanceRepository.save(permissionAttendance);
-
       return {
         statusCode: 200,
         status: 'success',
-        message: 'successfully sent permission attendance',
+        message: 'Successfully sent permission attendance',
       };
     } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
       throw new HttpException(
         {
           statusCode: HttpStatus.INTERNAL_SERVER_ERROR,

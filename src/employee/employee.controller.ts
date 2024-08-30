@@ -7,7 +7,7 @@ export class EmployeeController {
   constructor(private readonly employeeService: EmployeeService) {}
 
   @UseGuards(ThrottlerGuard)
-  @Throttle(10, 60)
+  @Throttle(50, 300)
   @Post('permission-attendance')
   async createPermissionAttendance(
     @Body('id_employee') id_employee: number,
