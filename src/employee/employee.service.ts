@@ -24,7 +24,7 @@ export class EmployeeService {
 
   async createPermissionAttendance(
     id_employee: number,
-    token_auth: string, // Tambahkan parameter token_auth
+    token_auth: string, // Parameter token_auth
     description: string,
     proof_of_attendance: string,
   ): Promise<any> {
@@ -46,13 +46,10 @@ export class EmployeeService {
       // Verifikasi token auth
       let decoded;
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         decoded = this.jwtService.verify(token_auth);
       } catch (error) {
         throw new UnauthorizedException('Invalid token');
-      }
-
-      if (!decoded || !decoded.sub) {
-        throw new UnauthorizedException('Invalid token payload');
       }
 
       // Cari employee berdasarkan id
