@@ -8,6 +8,7 @@ import { EmployeeModule } from './employee/employee.module';
 import { CompanyModule } from './company/company.module';
 import { JobInformationModule } from 'src/job_information/job_information.module';
 import { GeneralInforamtionModule } from './general_inforamtion/general_inforamtion.module';
+import { PermissionAttendanceModule } from './permission_attendance/permission_attendance.module';
 
 
 @Module({
@@ -28,6 +29,7 @@ import { GeneralInforamtionModule } from './general_inforamtion/general_inforamt
       }),
     }),
     EmployeeModule,
+    PermissionAttendanceModule,
     CompanyModule,
     GeneralInforamtionModule,
     JobInformationModule,

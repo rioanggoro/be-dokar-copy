@@ -1,21 +1,22 @@
 import { Module } from '@nestjs/common';
 import { EmployeeService } from './employee.service';
-import { EmployeeController } from './employee.controller';
+import { EmployeeController } from 'src/employee/employee.controller';
+import { PermissionAttendance } from 'src/permission_attendance/entities/permission_attendance.entity';
 import { Employee } from './entities/employee.entity';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Company } from 'src/company/entities/company.entity';
-import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
-import { GeneralInforamtion } from 'src/general_inforamtion/entities/general_inforamtion.entity';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { JwtModule } from '@nestjs/jwt';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { Company } from 'src/company/entities/company.entity';
+import { GeneralInforamtion } from 'src/general_inforamtion/entities/general_inforamtion.entity';
 import { JobInformation } from 'src/job_information/entities/job_information.entity';
 
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
-    TypeOrmModule.forFeature([JobInformation, Employee, Company, GeneralInforamtion]),
+    TypeOrmModule.forFeature([JobInformation, Employee, Company, GeneralInforamtion, PermissionAttendance]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
