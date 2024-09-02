@@ -1,9 +1,9 @@
 import {
-  BadRequestException, 
-  Injectable, 
-  InternalServerErrorException, 
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
   NotFoundException,
-  UseFilters,  
+  UseFilters,
   UnauthorizedException,
   HttpException,
   HttpStatus,
@@ -19,21 +19,24 @@ import { comparePassword, hashPassword } from 'src/shared/utils/hash.util';
 import { RegisterEmployeeDto } from './dto/register-employee.dto';
 import { LoginEmployeeDto } from './dto/login-employee.dto';
 import { PermissionAttendance } from 'src/permission_attendance/entities/permission_attendance.entity';
+import * as nodemailer from 'nodemailer';
+import { EmployeeSendOtpDto } from './dto/employee-sendotp.dto';
+import { EmployeeVerifyOtpDto } from './dto/employee-verifyotp.dto';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
 export class EmployeeService {
-
+  private otps: Record<string, { otp: string; expiresAt: number }> = {};
   constructor(
     @InjectRepository(Employee)
     private employeeRepository: Repository<Employee>,
     @InjectRepository(GeneralInforamtion)
     private generalInformationRepository: Repository<GeneralInforamtion>,
     @InjectRepository(Company)
-    private companyRepository: Repository<Company>,      
+    private companyRepository: Repository<Company>,
     @InjectRepository(PermissionAttendance)
     private permissionAttendanceRepository: Repository<PermissionAttendance>,
-    
+
     private jwtService: JwtService, // Injeksi JwtService
   ) {}
 
@@ -68,14 +71,19 @@ export class EmployeeService {
 
     if (existingEmployee && existingEmployee.id_employee !== id_employee) {
       // Periksa apakah password yang diberikan cocok dengan password yang tersimpan
-      const isPasswordValid = await comparePassword(password, existingEmployee.password);
+      const isPasswordValid = await comparePassword(
+        password,
+        existingEmployee.password,
+      );
 
       if (!isPasswordValid) {
         throw new BadRequestException('Invalid password');
       }
 
       // Jika email sudah terdaftar dan password valid, lemparkan error
-      throw new InternalServerErrorException('Account is already registered, please use another account');
+      throw new InternalServerErrorException(
+        'Account is already registered, please use another account',
+      );
     }
 
     const hashedPassword = await hashPassword(password);
@@ -86,7 +94,9 @@ export class EmployeeService {
 
     // Pastikan generalInformation tidak undefined
     if (!employee.generalInformation) {
-      throw new NotFoundException('General Information not found for this employee');
+      throw new NotFoundException(
+        'General Information not found for this employee',
+      );
     }
 
     // Update general_information table
@@ -113,10 +123,10 @@ export class EmployeeService {
   }
 
   catch() {
-    throw new InternalServerErrorException('Internal server error occurred while processing the request');
+    throw new InternalServerErrorException(
+      'Internal server error occurred while processing the request',
+    );
   }
-
- 
 
   async login(loginEmployeeDto: LoginEmployeeDto) {
     const { email, password } = loginEmployeeDto;
@@ -159,7 +169,7 @@ export class EmployeeService {
     };
   }
 
-   async createPermissionAttendance(
+  async createPermissionAttendance(
     token_auth: string, // Parameter token_auth
     id_employee: number,
     description: string,
@@ -232,5 +242,124 @@ export class EmployeeService {
       );
     }
   }
+  async sendOTP(
+    employeesendotpdto: EmployeeSendOtpDto,
+  ): Promise<{ statusCode: number; status: string; message: string }> {
+    const { email } = employeesendotpdto;
 
+    try {
+      // Validasi email
+      if (!email) {
+        throw new BadRequestException('Email is required');
+      }
+
+      // Cari employee berdasarkan email
+      const employee = await this.employeeRepository.findOne({
+        where: { email },
+      });
+
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = Date.now() + 5 * 60 * 1000; // OTP valid selama 5 menit
+
+      // Simpan OTP dan waktu kedaluwarsa dalam memori
+      this.otps[email] = { otp, expiresAt };
+
+      // Kirim email OTP
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+      });
+
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: employee.email,
+        subject: 'Your OTP for Password Reset',
+        text: `Kode OTP Anda: ${otp}, berlaku selama 5 menit. Jangan berikan kode OTP anda kepada orang lain.`,
+      };
+
+      await transporter.sendMail(mailOptions);
+
+      return {
+        statusCode: 200,
+        status: 'success',
+        message: 'Successfully sent OTP to email',
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+
+      // Tangani error yang tidak terduga
+      throw new InternalServerErrorException('Error sending OTP');
+    }
+  }
+
+  async verifyOTP(
+    employeeVerifyDto: EmployeeVerifyOtpDto,
+  ): Promise<{ statusCode: number; status: string; message: string }> {
+    const { email, otp } = employeeVerifyDto;
+
+    try {
+      // Validasi email dan OTP
+      if (!email) {
+        throw new BadRequestException('Email is required');
+      }
+      if (!otp) {
+        throw new BadRequestException('OTP is required');
+      }
+
+      // Cari employee berdasarkan email
+      const employee = await this.employeeRepository.findOne({
+        where: { email },
+      });
+
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      // Periksa OTP yang tersimpan
+      const record = this.otps[email];
+
+      if (!record) {
+        throw new NotFoundException('Enter the correct OTP code');
+      }
+
+      // Validasi apakah OTP telah kedaluwarsa
+      if (record.expiresAt < Date.now()) {
+        console.log('OTP has expired');
+        throw new UnauthorizedException('OTP has expired');
+      }
+
+      // Hapus OTP setelah verifikasi sukses
+      delete this.otps[email];
+
+      return {
+        statusCode: 200,
+        status: 'success',
+        message: 'Successfully verified OTP',
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+
+      // Tangani error yang tidak terduga
+      throw new InternalServerErrorException('Error verifying OTP');
+    }
+  }
 }

@@ -1,22 +1,19 @@
 import {
   Controller,
-  Get,
   Post,
   Body,
-  Patch,
-  Param,
-  Delete,
   UseGuards,
   Headers,
   NotFoundException,
+  UseFilters,
 } from '@nestjs/common';
 import { EmployeeService } from './employee.service';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { RegisterEmployeeDto } from './dto/register-employee.dto';
 import { LoginEmployeeDto } from './dto/login-employee.dto';
-
-
-
+import { HttpExceptionFilter } from 'src/shared/filters/exception.filter';
+import { EmployeeSendOtpDto } from './dto/employee-sendotp.dto';
+import { EmployeeVerifyOtpDto } from './dto/employee-verifyotp.dto';
 
 @Controller('employee')
 export class EmployeeController {
@@ -41,12 +38,12 @@ export class EmployeeController {
     // Lanjutkan dengan logika lainnya
     return this.employeeService.createPermissionAttendance(
       token_auth,
-      id_employee,    
+      id_employee,
       description,
       proof_of_attendance,
     );
   }
-  
+
   // Endpoint untuk login
   @UseGuards(ThrottlerGuard)
   @Throttle(10, 60)
@@ -63,10 +60,19 @@ export class EmployeeController {
     return this.employeeService.registerEmployee(registerEmployeeDto);
   }
 
+  @Post('send-otp')
+  @UseGuards(ThrottlerGuard)
+  @Throttle(50, 300)
+  @UseFilters(HttpExceptionFilter)
+  async sendOTP(@Body() employeesendotpdto: EmployeeSendOtpDto) {
+    return this.employeeService.sendOTP(employeesendotpdto);
+  }
 
+  @Post('verify-otp')
+  @UseGuards(ThrottlerGuard)
+  @Throttle(50, 300)
+  @UseFilters(HttpExceptionFilter)
+  async verifyOTP(@Body() employeeVerifyDto: EmployeeVerifyOtpDto) {
+    return this.employeeService.verifyOTP(employeeVerifyDto);
+  }
 }
-
-  
-
-  
-
