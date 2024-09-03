@@ -26,7 +26,10 @@ import { EmployeeVerifyOtpDto } from './dto/employee-verifyotp.dto';
 @Injectable()
 @UseFilters(HttpExceptionFilter)
 export class EmployeeService {
-  private otps: Record<string, { otp: string; expiresAt: number }> = {};
+  private otps: Record<
+    string,
+    { otp: string; expiresAt: number; isUsed: boolean }
+  > = {};
   constructor(
     @InjectRepository(Employee)
     private employeeRepository: Repository<Employee>,
@@ -263,10 +266,11 @@ export class EmployeeService {
       }
 
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiresAt = Date.now() + 5 * 60 * 1000; // OTP valid selama 5 menit
+      // const expiresAt = Date.now() + 5 * 60 * 1000; // OTP valid selama 5 menit
+      const expiresAt = Date.now() + 30 * 1000; // OTP valid selama 30 detik
 
       // Simpan OTP dan waktu kedaluwarsa dalam memori
-      this.otps[email] = { otp, expiresAt };
+      this.otps[email] = { otp, expiresAt, isUsed: false };
 
       // Kirim email OTP
       const transporter = nodemailer.createTransport({
@@ -341,14 +345,7 @@ export class EmployeeService {
       const record = this.otps[email];
 
       if (!record) {
-        throw new NotFoundException('OTP not found or already used');
-      }
-
-      // Validasi apakah OTP telah kedaluwarsa
-      if (record.expiresAt < Date.now()) {
-        console.log('OTP has expired');
-        delete this.otps[email]; // Hapus OTP yang kedaluwarsa
-        throw new UnauthorizedException('OTP has expired');
+        throw new NotFoundException('OTP not found');
       }
 
       // Ubah OTP yang diterima menjadi string
@@ -357,8 +354,19 @@ export class EmployeeService {
         throw new UnauthorizedException('Invalid OTP');
       }
 
-      // Hapus OTP setelah verifikasi sukses
-      delete this.otps[email];
+      // Periksa apakah OTP telah digunakan
+      if (record.isUsed) {
+        throw new UnauthorizedException('OTP has already been used');
+      }
+
+      // Validasi apakah OTP telah kedaluwarsa
+      if (record.expiresAt < Date.now()) {
+        delete this.otps[email]; // Hapus OTP yang kedaluwarsa
+        throw new UnauthorizedException('OTP has expired'); //otp expired apabila otp tidak diinput selama waktu yang ditentukan
+      }
+
+      //Setelah berhasil verifikasi, OTP akan di hapus dari memori
+      record.isUsed = true;
 
       return {
         statusCode: 200,
