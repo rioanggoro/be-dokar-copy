@@ -23,6 +23,7 @@ import * as nodemailer from 'nodemailer';
 import { EmployeeSendOtpDto } from './dto/employee-sendotp.dto';
 import { EmployeeVerifyOtpDto } from './dto/employee-verifyotp.dto';
 import { EmployeeChangePasswordDto } from './dto/employee-changepassword.dto';
+import { EmployeePermissionAttendanceDto } from './dto/employee-permissionattendance.dto';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -171,11 +172,12 @@ export class EmployeeService {
   }
 
   async createPermissionAttendance(
-    token_auth: string, // Parameter token_auth
-    id_employee: number,
-    description: string,
-    proof_of_attendance: string,
+    token_auth: string, // Terima token_auth dari controller
+    employeePermissionAttendanceDto: EmployeePermissionAttendanceDto,
   ): Promise<any> {
+    const { id_employee, description, proof_of_attendance } =
+      employeePermissionAttendanceDto;
+
     try {
       // Validasi input
       if (!id_employee) {
