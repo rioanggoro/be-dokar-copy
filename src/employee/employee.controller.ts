@@ -14,6 +14,7 @@ import { LoginEmployeeDto } from './dto/login-employee.dto';
 import { HttpExceptionFilter } from 'src/shared/filters/exception.filter';
 import { EmployeeSendOtpDto } from './dto/employee-sendotp.dto';
 import { EmployeeVerifyOtpDto } from './dto/employee-verifyotp.dto';
+import { EmployeeChangePasswordDto } from './dto/employee-changepassword.dto';
 
 @Controller('employee')
 export class EmployeeController {
@@ -74,5 +75,14 @@ export class EmployeeController {
   @UseFilters(HttpExceptionFilter)
   async verifyOTP(@Body() employeeVerifyDto: EmployeeVerifyOtpDto) {
     return this.employeeService.verifyOTP(employeeVerifyDto);
+  }
+
+  @Post('change-password')
+  @UseGuards(ThrottlerGuard)
+  @Throttle(50, 300)
+  async changePassword(
+    @Body() employeeChangePasswordDto: EmployeeChangePasswordDto,
+  ) {
+    return this.employeeService.changePassword(employeeChangePasswordDto);
   }
 }

@@ -22,6 +22,7 @@ import { PermissionAttendance } from 'src/permission_attendance/entities/permiss
 import * as nodemailer from 'nodemailer';
 import { EmployeeSendOtpDto } from './dto/employee-sendotp.dto';
 import { EmployeeVerifyOtpDto } from './dto/employee-verifyotp.dto';
+import { EmployeeChangePasswordDto } from './dto/employee-changepassword.dto';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -369,6 +370,43 @@ export class EmployeeService {
 
       // Tangani error yang tidak terduga
       throw new InternalServerErrorException('Error verifying OTP');
+    }
+  }
+  async changePassword(
+    employeeChangePasswordDto: EmployeeChangePasswordDto,
+  ): Promise<{ statusCode: number; status: string; message: string }> {
+    const { email, new_password } = employeeChangePasswordDto;
+
+    try {
+      // Validasi input
+      if (!email || !new_password) {
+        throw new BadRequestException('Email and new password are required');
+      }
+
+      // Cari employee berdasarkan email
+      const employee = await this.employeeRepository.findOne({
+        where: { email },
+      });
+
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      // Hash password baru
+      const hashedPassword = await hashPassword(new_password);
+
+      // Update password employee
+      employee.password = hashedPassword;
+      await this.employeeRepository.save(employee);
+
+      return {
+        statusCode: 200,
+        status: 'success',
+        message: 'Password has been successfully changed',
+      };
+    } catch (error) {
+      // Tangani error yang tidak terduga
+      throw new InternalServerErrorException('Failed to change password');
     }
   }
 }
