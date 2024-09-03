@@ -402,11 +402,11 @@ export class EmployeeService {
       return {
         statusCode: 200,
         status: 'success',
-        message: 'Password has been successfully changed',
+        message: 'Successfully change password',
       };
     } catch (error) {
       // Tangani error yang tidak terduga
-      throw new InternalServerErrorException('Failed to change password');
+      throw new InternalServerErrorException('Error change password');
     }
   }
 }
