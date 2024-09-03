@@ -281,7 +281,15 @@ export class EmployeeService {
         from: process.env.EMAIL_USER,
         to: employee.email,
         subject: 'Kode OTP Untuk Reset Password',
-        text: `Kode OTP Anda: ${otp}, berlaku selama 5 menit. Jangan berikan kode OTP anda kepada orang lain.`,
+        html: `
+    Hai,Pakai kode OTP di bawah ini untuk akunmu.<br><br>
+
+    <span style="font-size: 24px; color: blue;">${otp}</span><br><br>
+
+    Kodenya berlaku selama 5 menit.<br><br>
+
+    Demi keamananmu, jangan berikan kodenya ke siapa pun!
+  `,
       };
 
       await transporter.sendMail(mailOptions);
