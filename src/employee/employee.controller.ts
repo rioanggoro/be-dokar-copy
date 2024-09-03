@@ -45,6 +45,7 @@ export class EmployeeController {
   }
 
   // Endpoint untuk login
+  @UseFilters(HttpExceptionFilter)
   @UseGuards(ThrottlerGuard)
   @Throttle(10, 60)
   @Post('login')
@@ -53,6 +54,7 @@ export class EmployeeController {
   }
 
   // Endpoint untuk register
+  @UseFilters(HttpExceptionFilter)
   @UseGuards(ThrottlerGuard)
   @Throttle(10, 60) // udah berdasarkan ip user
   @Post('register')
@@ -62,10 +64,10 @@ export class EmployeeController {
 
   @Post('send-otp')
   @UseGuards(ThrottlerGuard)
-  @Throttle(50, 300)
+  @Throttle(50, 300) // Membatasi 50 permintaan per 5 menit
   @UseFilters(HttpExceptionFilter)
-  async sendOTP(@Body() employeesendotpdto: EmployeeSendOtpDto) {
-    return this.employeeService.sendOTP(employeesendotpdto);
+  async sendOTP(@Body() employeeSendOtpDto: EmployeeSendOtpDto) {
+    return this.employeeService.sendOTP(employeeSendOtpDto);
   }
 
   @Post('verify-otp')

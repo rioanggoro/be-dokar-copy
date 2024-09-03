@@ -1,6 +1,6 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty } from 'class-validator';
 export class EmployeeSendOtpDto {
-  @IsNotEmpty()
-  @IsString()
+  @IsEmail()
+  @IsNotEmpty({ message: 'Email is required' })
   email: string;
 }
