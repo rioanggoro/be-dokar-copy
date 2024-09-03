@@ -283,7 +283,7 @@ export class EmployeeService {
         to: employee.email,
         subject: 'Kode OTP Untuk Reset Password',
         html: `
-    Hai,Pakai kode OTP di bawah ini untuk akunmu.<br><br>
+    Hai, Pakai kode OTP di bawah ini untuk akunmu.<br><br>
 
     <span style="font-size: 24px; color: blue;">${otp}</span><br><br>
 
