@@ -280,7 +280,7 @@ export class EmployeeService {
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: employee.email,
-        subject: 'Your OTP for Password Reset',
+        subject: 'Kode OTP Untuk Reset Password',
         text: `Kode OTP Anda: ${otp}, berlaku selama 5 menit. Jangan berikan kode OTP anda kepada orang lain.`,
       };
 
@@ -292,6 +292,7 @@ export class EmployeeService {
         message: 'Successfully sent OTP to email',
       };
     } catch (error) {
+      console.error('Error detail:', error);
       if (
         error instanceof BadRequestException ||
         error instanceof NotFoundException ||
@@ -301,7 +302,7 @@ export class EmployeeService {
       }
 
       // Tangani error yang tidak terduga
-      throw new InternalServerErrorException('Error sending OTP');
+      throw new InternalServerErrorException('Error send otp to email');
     }
   }
 

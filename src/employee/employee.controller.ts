@@ -54,7 +54,7 @@ export class EmployeeController {
 
   // Endpoint untuk register
   @UseGuards(ThrottlerGuard)
-  @Throttle(5, 60) // udah berdasarkan ip user
+  @Throttle(10, 60) // udah berdasarkan ip user
   @Post('register')
   async register(@Body() registerEmployeeDto: RegisterEmployeeDto) {
     return this.employeeService.registerEmployee(registerEmployeeDto);
