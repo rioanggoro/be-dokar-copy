@@ -341,13 +341,20 @@ export class EmployeeService {
       const record = this.otps[email];
 
       if (!record) {
-        throw new NotFoundException('Enter the correct OTP code');
+        throw new NotFoundException('OTP not found or already used');
       }
 
       // Validasi apakah OTP telah kedaluwarsa
       if (record.expiresAt < Date.now()) {
         console.log('OTP has expired');
+        delete this.otps[email]; // Hapus OTP yang kedaluwarsa
         throw new UnauthorizedException('OTP has expired');
+      }
+
+      // Ubah OTP yang diterima menjadi string
+      if (record.otp !== otp.toString()) {
+        console.log('Invalid OTP');
+        throw new UnauthorizedException('Invalid OTP');
       }
 
       // Hapus OTP setelah verifikasi sukses
