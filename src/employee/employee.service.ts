@@ -266,8 +266,8 @@ export class EmployeeService {
       }
 
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      // const expiresAt = Date.now() + 5 * 60 * 1000; // OTP valid selama 5 menit
-      const expiresAt = Date.now() + 30 * 1000; // OTP valid selama 30 detik
+      const expiresAt = Date.now() + 5 * 60 * 1000; // OTP valid selama 5 menit
+      // const expiresAt = Date.now() + 30 * 1000; // OTP valid selama 30 detik
 
       // Simpan OTP dan waktu kedaluwarsa dalam memori
       this.otps[email] = { otp, expiresAt };
@@ -350,7 +350,6 @@ export class EmployeeService {
 
       // Validasi apakah OTP telah kedaluwarsa
       if (record.expiresAt < Date.now()) {
-        console.log('OTP has expired');
         delete this.otps[email]; // Hapus OTP yang kedaluwarsa
         throw new UnauthorizedException('OTP has expired');
       }
@@ -407,7 +406,7 @@ export class EmployeeService {
       // Validasi panjang password
       if (new_password.length < 8) {
         throw new BadRequestException(
-          'Password must be at least 6 characters long',
+          'Password must be at least 8 characters long',
         );
       }
 

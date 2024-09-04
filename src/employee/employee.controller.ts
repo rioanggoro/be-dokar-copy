@@ -81,7 +81,7 @@ export class EmployeeController {
 
   @Post('change-password')
   @UseGuards(ThrottlerGuard)
-  @Throttle(50, 300)
+  @Throttle(5, 60)
   @UseFilters(HttpExceptionFilter)
   async changePassword(
     @Body() employeeChangePasswordDto: EmployeeChangePasswordDto,
