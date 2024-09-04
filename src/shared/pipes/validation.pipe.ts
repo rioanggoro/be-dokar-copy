@@ -36,7 +36,36 @@ export class CustomValidationPipe implements PipeTransform<any> {
   private formatErrors(errors: any[]) {
     return errors
       .map((err) => {
-        return `${err.property} has wrong value ${err.value}, ${Object.values(err.constraints).join(', ')}`;
+        // Jika properti yang divalidasi adalah 'email'
+        if (err.property === 'email') {
+          // Jika constraint memiliki 'isNotEmpty', ambil pesan tersebut
+          if (err.constraints.isNotEmpty) {
+            return 'Email is required';
+          }
+
+          // Jika constraint adalah format email
+          if (err.constraints.isEmail) {
+            return 'Email must be a valid email';
+          }
+        }
+
+        // Jika properti yang divalidasi adalah 'password'
+        if (err.property === 'password') {
+          if (err.constraints.isNotEmpty) {
+            return 'Password is required';
+          }
+        }
+
+        // Jika properti yang divalidasi adalah 'new_password'
+        if (err.property === 'new_password') {
+          if (err.constraints.isNotEmpty) {
+            return 'New password is required';
+          }
+        }
+
+        // Kondisi umum untuk properti lain
+        const constraintMessages = Object.values(err.constraints).join(', ');
+        return `${err.property} has wrong value ${err.value}, ${constraintMessages}`;
       })
       .join('; ');
   }

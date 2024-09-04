@@ -251,10 +251,10 @@ export class EmployeeService {
     const { email } = employeesendotpdto;
 
     try {
-      // Validasi email
-      if (!email) {
-        throw new BadRequestException('Email is required');
-      }
+      // // Validasi email
+      // if (!email) {
+      //   throw new BadRequestException('Email is required');
+      // }
 
       // Cari employee berdasarkan email
       const employee = await this.employeeRepository.findOne({
@@ -387,21 +387,15 @@ export class EmployeeService {
     const { email, new_password } = employeeChangePasswordDto;
 
     try {
-      // Validasi input email
-      if (!email) {
-        throw new BadRequestException('Email is required');
-      }
+      // // Validasi input email
+      // if (!email) {
+      //   throw new BadRequestException('Email is required');
+      // }
 
-      // Validasi format email (opsional, bisa menggunakan regex atau library validasi)
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        throw new BadRequestException('Invalid email format');
-      }
-
-      // Validasi input password
-      if (!new_password) {
-        throw new BadRequestException('New password is required');
-      }
+      // // Validasi input password
+      // if (!new_password) {
+      //   throw new BadRequestException('New password is required');
+      // }
 
       // Validasi panjang password
       if (new_password.length < 8) {
@@ -438,6 +432,9 @@ export class EmployeeService {
       ) {
         throw error;
       }
+
+      // Tangani error yang tidak terduga dan log error internal untuk debugging
+      console.error('Error changing password:', error);
       // Tangani error yang tidak terduga
       throw new InternalServerErrorException('Error changing password');
     }
