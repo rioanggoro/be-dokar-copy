@@ -266,7 +266,8 @@ export class EmployeeService {
       }
 
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiresAt = Date.now() + 5 * 60 * 1000; // OTP valid selama 5 menit
+      // const expiresAt = Date.now() + 5 * 60 * 1000; // OTP valid selama 5 menit
+      const expiresAt = Date.now() + 30 * 1000; // OTP valid selama 30 detik
 
       // Simpan OTP dan waktu kedaluwarsa dalam memori
       this.otps[email] = { otp, expiresAt };
@@ -387,9 +388,27 @@ export class EmployeeService {
     const { email, new_password } = employeeChangePasswordDto;
 
     try {
-      // Validasi input
-      if (!email || !new_password) {
-        throw new BadRequestException('Email and new password are required');
+      // Validasi input email
+      if (!email) {
+        throw new BadRequestException('Email is required');
+      }
+
+      // Validasi format email (opsional, bisa menggunakan regex atau library validasi)
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new BadRequestException('Invalid email format');
+      }
+
+      // Validasi input password
+      if (!new_password) {
+        throw new BadRequestException('New password is required');
+      }
+
+      // Validasi panjang password
+      if (new_password.length < 8) {
+        throw new BadRequestException(
+          'Password must be at least 6 characters long',
+        );
       }
 
       // Cari employee berdasarkan email
@@ -411,11 +430,17 @@ export class EmployeeService {
       return {
         statusCode: 200,
         status: 'success',
-        message: 'Successfully change password',
+        message: 'Password has been changed successfully',
       };
     } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
       // Tangani error yang tidak terduga
-      throw new InternalServerErrorException('Error change password');
+      throw new InternalServerErrorException('Error changing password');
     }
   }
 }
