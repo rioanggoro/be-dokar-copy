@@ -15,7 +15,7 @@ import { LoginEmployeeDto } from './dto/login-employee.dto';
 import { HttpExceptionFilter } from 'src/shared/filters/exception.filter';
 import { EmployeeSendOtpDto } from './dto/employee-sendotp.dto';
 import { EmployeeVerifyOtpDto } from './dto/employee-verifyotp.dto';
-import { EmployeeChangePasswordDto } from './dto/employee-changepassword.dto';
+import { EmployeeChangePasswordDto } from './dto/employee-change-password.dto';
 import { EmployeePermissionAttendanceDto } from './dto/employee-permissionattendance.dto';
 
 @Controller('employee')

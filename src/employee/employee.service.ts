@@ -22,8 +22,8 @@ import { PermissionAttendance } from 'src/permission_attendance/entities/permiss
 import * as nodemailer from 'nodemailer';
 import { EmployeeSendOtpDto } from './dto/employee-sendotp.dto';
 import { EmployeeVerifyOtpDto } from './dto/employee-verifyotp.dto';
-import { EmployeeChangePasswordDto } from './dto/employee-changepassword.dto';
-import { EmployeePermissionAttendanceDto } from './dto/employee-permissionattendance.dto';
+import { EmployeeChangePasswordDto } from './dto/employee-change-password.dto';
+import { EmployeePermissionAttendanceDto } from 'src/employee/dto/employee-permissionattendance.dto';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
