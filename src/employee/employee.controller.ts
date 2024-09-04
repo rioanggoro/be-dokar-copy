@@ -64,7 +64,7 @@ export class EmployeeController {
 
   @Post('send-otp')
   @UseGuards(ThrottlerGuard)
-  @Throttle(50, 300) // Membatasi 50 permintaan per 5 menit
+  @Throttle(5, 300) // Membatasi 50 permintaan per 5 menit
   @UseFilters(HttpExceptionFilter)
   async sendOTP(@Body() employeeSendOtpDto: EmployeeSendOtpDto) {
     return this.employeeService.sendOTP(employeeSendOtpDto);
@@ -72,7 +72,7 @@ export class EmployeeController {
 
   @Post('verify-otp')
   @UseGuards(ThrottlerGuard)
-  @Throttle(50, 300)
+  @Throttle(5, 300)
   @UseFilters(HttpExceptionFilter)
   async verifyOTP(@Body() employeeVerifyDto: EmployeeVerifyOtpDto) {
     return this.employeeService.verifyOTP(employeeVerifyDto);
