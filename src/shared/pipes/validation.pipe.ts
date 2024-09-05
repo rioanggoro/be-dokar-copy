@@ -34,39 +34,37 @@ export class CustomValidationPipe implements PipeTransform<any> {
   }
 
   private formatErrors(errors: any[]) {
-    return errors
-      .map((err) => {
-        // Jika properti yang divalidasi adalah 'email'
-        if (err.property === 'email') {
-          // Jika constraint memiliki 'isNotEmpty', ambil pesan tersebut
-          if (err.constraints.isNotEmpty) {
-            return 'Email is required';
-          }
+    const formattedMessages = new Set<string>(); // Menggunakan Set untuk menghindari duplikasi pesan
 
-          // Jika constraint adalah format email
-          if (err.constraints.isEmail) {
-            return 'Email must be a valid email';
-          }
-        }
+    errors.forEach((err) => {
+      const constraints = err.constraints;
 
-        // Jika properti yang divalidasi adalah 'password'
-        if (err.property === 'password') {
-          if (err.constraints.isNotEmpty) {
-            return 'Password is required';
-          }
-        }
+      // Jika parameter tidak ada sama sekali (undefined)
+      if (err.value === undefined || err.value === null) {
+        formattedMessages.add(`Missing parameter: ${err.property}`);
+      } else {
+        // Memproses constraint dan validasi lain
+        Object.keys(constraints).forEach((key) => {
+          const constraintMessage = constraints[key];
 
-        // Jika properti yang divalidasi adalah 'new_password'
-        if (err.property === 'new_password') {
-          if (err.constraints.isNotEmpty) {
-            return 'New password is required';
+          // Jika nilai adalah string kosong
+          if (err.value === '') {
+            formattedMessages.add(`${err.property} cannot be empty`);
           }
-        }
+          // Menangani tipe data yang salah, misalnya email bukan string
+          else if (err.property === 'email' && typeof err.value !== 'string') {
+            formattedMessages.add(`${err.property} must be a string`);
+          }
+          // Menangani validasi format atau constraint lain
+          else {
+            formattedMessages.add(
+              `${err.property} has invalid value '${err.value}': ${constraintMessage}`,
+            );
+          }
+        });
+      }
+    });
 
-        // Kondisi umum untuk properti lain
-        const constraintMessages = Object.values(err.constraints).join(', ');
-        return `${err.property} has wrong value ${err.value}, ${constraintMessages}`;
-      })
-      .join('; ');
+    return Array.from(formattedMessages).join('; ');
   }
 }

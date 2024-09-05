@@ -15,6 +15,7 @@ export class RegisterEmployeeDto {
 
   @IsString()
   @IsNotEmpty()
+  @IsNumber()
   password: string;
 
   @IsString()

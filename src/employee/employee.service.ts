@@ -251,11 +251,6 @@ export class EmployeeService {
     const { email } = employeesendotpdto;
 
     try {
-      // // Validasi email
-      // if (!email) {
-      //   throw new BadRequestException('Email is required');
-      // }
-
       // Cari employee berdasarkan email
       const employee = await this.employeeRepository.findOne({
         where: { email },
@@ -324,10 +319,10 @@ export class EmployeeService {
     const { email, otp } = employeeVerifyDto;
 
     try {
-      // Validasi email dan OTP
-      if (!email) {
-        throw new BadRequestException('Email is required');
-      }
+      // // Validasi email dan OTP
+      // if (!email) {
+      //   throw new BadRequestException('Email is required');
+      // }
       if (!otp) {
         throw new BadRequestException('OTP is required');
       }
