@@ -51,40 +51,41 @@ export class CustomValidationPipe implements PipeTransform<any> {
   }
 
   // Memformat pesan error dan memeriksa tipe data secara dinamis
-  private formatErrors(errors: any[], expectedTypes: Record<string, string>) {
-    const formattedMessages = new Set<string>();
+private formatErrors(errors: any[], expectedTypes: Record<string, string>) {
+  const formattedMessages = new Set<string>();
 
-    errors.forEach((err) => {
-      const constraints = err.constraints;
-      const expectedType = expectedTypes[err.property]; // Mendapatkan tipe data yang diharapkan
+  errors.forEach((err) => {
+    const constraints = err.constraints;
+    const expectedType = expectedTypes[err.property]; // Mendapatkan tipe data yang diharapkan
 
-      // Jika parameter tidak ada sama sekali (undefined atau null)
-      if (err.value === undefined || err.value === null) {
-        formattedMessages.add(`Missing parameter: ${err.property}`);
-      } else {
-        // Cek tipe data secara dinamis
-        if (expectedType && typeof err.value !== expectedType) {
+    // Jika parameter tidak ada sama sekali (undefined atau null)
+    if (err.value === undefined || err.value === null) {
+      formattedMessages.add(`Missing parameter: ${err.property}`);
+    } else {
+      // Cek tipe data secara dinamis
+      if (expectedType && typeof err.value !== expectedType) {
+        formattedMessages.add(
+          `${err.property} has invalid value '${err.value}': ${err.property} must be a ${expectedType}`,
+        );
+      }
+
+      // Memproses constraint dan validasi lain
+      Object.keys(constraints).forEach((key) => {
+        const constraintMessage = constraints[key];
+
+        // Jika nilai adalah string kosong
+        if (err.value === '') {
+          formattedMessages.add(`${err.property} cannot be empty`);
+        } else {
           formattedMessages.add(
-            `${err.property} must be of type ${expectedType}`,
+            `${err.property} has invalid value '${err.value}': ${constraintMessage}`,
           );
         }
+      });
+    }
+  });
 
-        // Memproses constraint dan validasi lain
-        Object.keys(constraints).forEach((key) => {
-          const constraintMessage = constraints[key];
+  return Array.from(formattedMessages).join('; ');
+}
 
-          // Jika nilai adalah string kosong
-          if (err.value === '') {
-            formattedMessages.add(`${err.property} cannot be empty`);
-          } else {
-            formattedMessages.add(
-              `${err.property} has invalid value '${err.value}': ${constraintMessage}`,
-            );
-          }
-        });
-      }
-    });
-
-    return Array.from(formattedMessages).join('; ');
-  }
 }

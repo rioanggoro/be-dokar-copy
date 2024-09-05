@@ -382,23 +382,6 @@ export class EmployeeService {
     const { email, new_password } = employeeChangePasswordDto;
 
     try {
-      // // Validasi input email
-      // if (!email) {
-      //   throw new BadRequestException('Email is required');
-      // }
-
-      // // Validasi input password
-      // if (!new_password) {
-      //   throw new BadRequestException('New password is required');
-      // }
-
-      // Validasi panjang password
-      if (new_password.length < 8) {
-        throw new BadRequestException(
-          'Password must be at least 8 characters long',
-        );
-      }
-
       // Cari employee berdasarkan email
       const employee = await this.employeeRepository.findOne({
         where: { email },
@@ -434,4 +417,5 @@ export class EmployeeService {
       throw new InternalServerErrorException('Error changing password');
     }
   }
+
 }
