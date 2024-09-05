@@ -20,10 +20,10 @@ import { RegisterEmployeeDto } from './dto/register-employee.dto';
 import { LoginEmployeeDto } from './dto/login-employee.dto';
 import { PermissionAttendance } from 'src/permission_attendance/entities/permission_attendance.entity';
 import * as nodemailer from 'nodemailer';
-import { EmployeeSendOtpDto } from './dto/employee-sendotp.dto';
-import { EmployeeVerifyOtpDto } from './dto/employee-verifyotp.dto';
-import { EmployeeChangePasswordDto } from './dto/employee-change-password.dto';
-import { EmployeePermissionAttendanceDto } from 'src/employee/dto/employee-permissionattendance.dto';
+import { SendOtpEmployeeDto } from './dto/sendotp-employee.dto';
+import { VerifyOtpEmployeeDto } from './dto/verifyotp-employee.dto';
+import { ChangePasswordEmployeeDto } from './dto/change_password-employee.dto';
+import { PermissionAttendanceEmployeeDto } from 'src/employee/dto/permission_attendance-employee.dto';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -173,7 +173,7 @@ export class EmployeeService {
 
   async createPermissionAttendance(
     token_auth: string, // Terima token_auth dari controller
-    employeePermissionAttendanceDto: EmployeePermissionAttendanceDto,
+    employeePermissionAttendanceDto: PermissionAttendanceEmployeeDto,
   ): Promise<any> {
     const { id_employee, description, proof_of_attendance } =
       employeePermissionAttendanceDto;
@@ -246,7 +246,7 @@ export class EmployeeService {
     }
   }
   async sendOTP(
-    employeesendotpdto: EmployeeSendOtpDto,
+    employeesendotpdto: SendOtpEmployeeDto,
   ): Promise<{ statusCode: number; status: string; message: string }> {
     const { email } = employeesendotpdto;
 
@@ -314,7 +314,7 @@ export class EmployeeService {
   }
 
   async verifyOTP(
-    employeeVerifyDto: EmployeeVerifyOtpDto,
+    employeeVerifyDto: VerifyOtpEmployeeDto,
   ): Promise<{ statusCode: number; status: string; message: string }> {
     const { email, otp } = employeeVerifyDto;
 
@@ -377,7 +377,7 @@ export class EmployeeService {
     }
   }
   async changePassword(
-    employeeChangePasswordDto: EmployeeChangePasswordDto,
+    employeeChangePasswordDto: ChangePasswordEmployeeDto,
   ): Promise<{ statusCode: number; status: string; message: string }> {
     const { email, new_password } = employeeChangePasswordDto;
 
@@ -417,5 +417,4 @@ export class EmployeeService {
       throw new InternalServerErrorException('Error changing password');
     }
   }
-
 }

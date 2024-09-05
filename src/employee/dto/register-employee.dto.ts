@@ -1,4 +1,10 @@
-import { IsEmail, IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsNumber,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export class RegisterEmployeeDto {
   @IsNumber()
@@ -10,14 +16,12 @@ export class RegisterEmployeeDto {
   id_employee: number;
 
   @IsEmail()
-  @IsNotEmpty()
   email: string;
 
   @IsString()
-  @IsNotEmpty()
+  @MinLength(8, { message: 'Password must be at least 8 characters long' }) // Validasi panjang password
   password: string;
 
   @IsString()
-  @IsNotEmpty()
   telephone: string;
 }

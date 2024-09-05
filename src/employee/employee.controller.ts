@@ -13,10 +13,10 @@ import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { RegisterEmployeeDto } from './dto/register-employee.dto';
 import { LoginEmployeeDto } from './dto/login-employee.dto';
 import { HttpExceptionFilter } from 'src/shared/filters/exception.filter';
-import { EmployeeSendOtpDto } from './dto/employee-sendotp.dto';
-import { EmployeeVerifyOtpDto } from './dto/employee-verifyotp.dto';
-import { EmployeeChangePasswordDto } from './dto/employee-change-password.dto';
-import { EmployeePermissionAttendanceDto } from './dto/employee-permissionattendance.dto';
+import { SendOtpEmployeeDto } from './dto/sendotp-employee.dto';
+import { VerifyOtpEmployeeDto } from './dto/verifyotp-employee.dto';
+import { ChangePasswordEmployeeDto } from './dto/change_password-employee.dto';
+import { PermissionAttendanceEmployeeDto } from './dto/permission_attendance-employee.dto';
 
 @Controller('employee')
 export class EmployeeController {
@@ -27,7 +27,7 @@ export class EmployeeController {
   @Post('permission-attendance')
   async createPermissionAttendance(
     @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
-    @Body() employeePermissionAttendanceDto: EmployeePermissionAttendanceDto,
+    @Body() employeePermissionAttendanceDto: PermissionAttendanceEmployeeDto,
   ): Promise<any> {
     // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
     if (!authHeader) {
@@ -67,7 +67,7 @@ export class EmployeeController {
   @UseGuards(ThrottlerGuard)
   @Throttle(50, 300)
   @UseFilters(HttpExceptionFilter)
-  async sendOTP(@Body() employeesendotpdto: EmployeeSendOtpDto) {
+  async sendOTP(@Body() employeesendotpdto: SendOtpEmployeeDto) {
     return this.employeeService.sendOTP(employeesendotpdto);
   }
 
@@ -75,7 +75,7 @@ export class EmployeeController {
   @UseGuards(ThrottlerGuard)
   @Throttle(50, 300)
   @UseFilters(HttpExceptionFilter)
-  async verifyOTP(@Body() employeeVerifyDto: EmployeeVerifyOtpDto) {
+  async verifyOTP(@Body() employeeVerifyDto: VerifyOtpEmployeeDto) {
     return this.employeeService.verifyOTP(employeeVerifyDto);
   }
 
@@ -84,7 +84,7 @@ export class EmployeeController {
   @Throttle(10, 60)
   @UseFilters(HttpExceptionFilter)
   async changePassword(
-    @Body() employeeChangePasswordDto: EmployeeChangePasswordDto,
+    @Body() employeeChangePasswordDto: ChangePasswordEmployeeDto,
   ) {
     return this.employeeService.changePassword(employeeChangePasswordDto);
   }

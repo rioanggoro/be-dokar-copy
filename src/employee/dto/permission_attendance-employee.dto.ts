@@ -1,9 +1,5 @@
 import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
-export class EmployeePermissionAttendanceDto {
-  // @IsString()
-  // @IsNotEmpty()
-  // token_auth: string;
-
+export class PermissionAttendanceEmployeeDto {
   @IsNumber()
   @IsNotEmpty()
   id_employee: number;
