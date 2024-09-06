@@ -132,7 +132,7 @@ export class EmployeeService {
     });
 
     if (!employee) {
-      throw new InternalServerErrorException('Invalid username');
+      throw new InternalServerErrorException('Invalid Email');
     }
 
     // Periksa password
@@ -149,7 +149,7 @@ export class EmployeeService {
     });
 
     return {
-      statusCode: 200,
+      statusCode: 201,
       status: 'success',
       message: 'Login successful',
       user: {
@@ -199,7 +199,7 @@ export class EmployeeService {
 
       await this.permissionAttendanceRepository.save(permissionAttendance);
       return {
-        statusCode: 200,
+        statusCode: 201,
         status: 'success',
         message: 'Successfully sent permission attendance',
       };
@@ -237,7 +237,7 @@ export class EmployeeService {
       }
 
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiresAt = Date.now() + 5 * 60 * 1000; // OTP valid selama 5 menit
+      const expiresAt = Date.now() + 2 * 60 * 1000; // OTP valid selama 2 menit
       // const expiresAt = Date.now() + 30 * 1000; // OTP valid selama 30 detik
 
       // Simpan OTP dan waktu kedaluwarsa dalam memori
@@ -261,7 +261,7 @@ export class EmployeeService {
 
     <span style="font-size: 24px; color: blue;">${otp}</span><br><br>
 
-    Kodenya berlaku selama 5 menit.<br><br>
+    Kodenya berlaku selama 2 menit.<br><br>
 
     Demi keamananmu, jangan berikan kodenya ke siapa pun!
   `,
@@ -270,7 +270,7 @@ export class EmployeeService {
       await transporter.sendMail(mailOptions);
 
       return {
-        statusCode: 200,
+        statusCode: 201,
         status: 'success',
         message: 'Successfully sent OTP to email',
       };
@@ -335,7 +335,7 @@ export class EmployeeService {
       delete this.otps[email];
 
       return {
-        statusCode: 200,
+        statusCode: 201,
         status: 'success',
         message: 'Successfully verified OTP',
       };
@@ -368,6 +368,17 @@ export class EmployeeService {
         throw new NotFoundException('Employee not found'); // Pengecekan employee di service
       }
 
+      // Cek apakah password baru sama dengan password lama
+      const isOldPasswordValid = await comparePassword(
+        new_password,
+        employee.password,
+      );
+      if (isOldPasswordValid) {
+        throw new BadRequestException(
+          'New password cannot be the same as the old password',
+        );
+      }
+
       // Hash password baru
       const hashedPassword = await hashPassword(new_password);
 
@@ -376,7 +387,7 @@ export class EmployeeService {
       await this.employeeRepository.save(employee);
 
       return {
-        statusCode: 200,
+        statusCode: 201,
         status: 'success',
         message: 'Successfully changed password',
       };

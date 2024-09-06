@@ -106,6 +106,6 @@ export class CustomValidationPipe implements PipeTransform<any> {
     });
 
     // Gabungkan semua pesan kesalahan menjadi satu string
-    return Array.from(formattedMessages.values()).join('; ');
+    return Array.from(formattedMessages.values()).join('. ');
   }
 }

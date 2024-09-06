@@ -51,6 +51,7 @@ export class EmployeeController {
   @UseGuards(ThrottlerGuard)
   @Throttle(10, 60)
   @Post('login')
+  @UseFilters(HttpExceptionFilter)
   async login(@Body() loginEmployeeDto: LoginEmployeeDto) {
     return this.employeeService.login(loginEmployeeDto);
   }
@@ -59,13 +60,14 @@ export class EmployeeController {
   @UseGuards(ThrottlerGuard)
   @Throttle(10, 60) // udah berdasarkan ip user
   @Post('register')
+  @UseFilters(HttpExceptionFilter)
   async register(@Body() registerEmployeeDto: RegisterEmployeeDto) {
     return this.employeeService.registerEmployee(registerEmployeeDto);
   }
 
   @Post('send-otp')
   @UseGuards(ThrottlerGuard)
-  @Throttle(50, 300)
+  @Throttle(10, 60)
   @UseFilters(HttpExceptionFilter)
   async sendOTP(@Body() employeesendotpdto: SendOtpEmployeeDto) {
     return this.employeeService.sendOTP(employeesendotpdto);
@@ -73,7 +75,7 @@ export class EmployeeController {
 
   @Post('verify-otp')
   @UseGuards(ThrottlerGuard)
-  @Throttle(50, 300)
+  @Throttle(10, 60)
   @UseFilters(HttpExceptionFilter)
   async verifyOTP(@Body() employeeVerifyDto: VerifyOtpEmployeeDto) {
     return this.employeeService.verifyOTP(employeeVerifyDto);
