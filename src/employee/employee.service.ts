@@ -53,7 +53,7 @@ export class EmployeeService {
       where: { id_company: id_company },
     });
     if (!company) {
-      throw new NotFoundException('Company not found');
+      throw new NotFoundException('Company not found'); // Tetap di service
     }
 
     // Cari employee berdasarkan id_employee dan id_company
@@ -63,7 +63,7 @@ export class EmployeeService {
     });
 
     if (!employee) {
-      throw new NotFoundException('Employee not found for this company');
+      throw new NotFoundException('Employee not found for this company'); // Tetap di service
     }
 
     // Cek apakah email sudah terdaftar untuk employee ini
@@ -82,52 +82,44 @@ export class EmployeeService {
         throw new BadRequestException('Invalid password');
       }
 
-      // Jika email sudah terdaftar dan password valid, lemparkan error
       throw new InternalServerErrorException(
         'Account is already registered, please use another account',
       );
     }
 
     const hashedPassword = await hashPassword(password);
-    // Update kolom-kolom yang ada pada tabel employee
     employee.email = email;
     employee.password = hashedPassword;
-    employee.company = company; // Assign company
+    employee.company = company;
 
-    // Pastikan generalInformation tidak undefined
     if (!employee.generalInformation) {
       throw new NotFoundException(
         'General Information not found for this employee',
       );
     }
 
-    // Update general_information table
     employee.generalInformation.phone = telephone;
 
-    // Simpan perubahan
     await this.employeeRepository.save(employee);
     await this.generalInformationRepository.save(employee.generalInformation);
 
-    // Generate JWT token
     const payload = { email: employee.email, sub: employee.id_employee };
     const token_auth = await this.jwtService.signAsync(payload);
 
     employee.token_auth = token_auth;
     await this.employeeRepository.save(employee);
 
-    // Mengembalikan response sukses beserta token
     return {
       statusCode: 201,
       status: 'success',
       message: 'Register successful',
       token_auth: token_auth,
+      catch() {
+        throw new InternalServerErrorException(
+          'Internal server error occurred while processing the request',
+        );
+      },
     };
-  }
-
-  catch() {
-    throw new InternalServerErrorException(
-      'Internal server error occurred while processing the request',
-    );
   }
 
   async login(loginEmployeeDto: LoginEmployeeDto) {
@@ -140,7 +132,7 @@ export class EmployeeService {
     });
 
     if (!employee) {
-      throw new InternalServerErrorException('Invalid username ');
+      throw new InternalServerErrorException('Invalid username');
     }
 
     // Periksa password
@@ -165,7 +157,6 @@ export class EmployeeService {
         id_employee: employee.id_employee,
         photo: employee.employee_photo,
         department: employee.jobInformation.user_department,
-        // token_device,
         token_auth,
       },
     };
@@ -179,7 +170,6 @@ export class EmployeeService {
       employeePermissionAttendanceDto;
 
     try {
-      // Verifikasi token auth
       let decoded;
       try {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -362,6 +352,7 @@ export class EmployeeService {
       throw new InternalServerErrorException('Error verifying OTP');
     }
   }
+
   async changePassword(
     employeeChangePasswordDto: ChangePasswordEmployeeDto,
   ): Promise<{ statusCode: number; status: string; message: string }> {
@@ -374,7 +365,7 @@ export class EmployeeService {
       });
 
       if (!employee) {
-        throw new NotFoundException('Employee not found');
+        throw new NotFoundException('Employee not found'); // Pengecekan employee di service
       }
 
       // Hash password baru
@@ -387,7 +378,7 @@ export class EmployeeService {
       return {
         statusCode: 200,
         status: 'success',
-        message: 'Password has been changed successfully',
+        message: 'Successfully changed password',
       };
     } catch (error) {
       if (
@@ -399,7 +390,6 @@ export class EmployeeService {
 
       // Tangani error yang tidak terduga dan log error internal untuk debugging
       console.error('Error changing password:', error);
-      // Tangani error yang tidak terduga
       throw new InternalServerErrorException('Error changing password');
     }
   }

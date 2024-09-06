@@ -8,14 +8,14 @@ import {
 
 export class RegisterEmployeeDto {
   @IsNumber()
-  @IsNotEmpty()
   id_company: number;
 
   @IsNumber()
   @IsNotEmpty()
   id_employee: number;
 
-  @IsEmail()
+  @IsEmail({}, { message: 'Email is not valid' })
+  @IsNotEmpty()
   email: string;
 
   @IsString()
@@ -23,5 +23,6 @@ export class RegisterEmployeeDto {
   password: string;
 
   @IsString()
+  @IsNotEmpty()
   telephone: string;
 }

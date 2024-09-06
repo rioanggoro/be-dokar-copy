@@ -1,7 +1,7 @@
 import { IsEmail, IsNotEmpty, IsNumber } from 'class-validator';
 
 export class VerifyOtpEmployeeDto {
-  @IsEmail()
+  @IsEmail({}, { message: 'Email is not valid' })
   @IsNotEmpty()
   email: string;
 
