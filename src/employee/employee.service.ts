@@ -140,14 +140,14 @@ export class EmployeeService {
     });
 
     if (!employee) {
-      throw new InternalServerErrorException('Invalid username or password');
+      throw new InternalServerErrorException('Invalid username ');
     }
 
     // Periksa password
     const isPasswordValid = await comparePassword(password, employee.password);
 
     if (!isPasswordValid) {
-      throw new InternalServerErrorException('Invalid username or password');
+      throw new InternalServerErrorException('Invalid password');
     }
 
     // Buat token JWT
@@ -179,20 +179,6 @@ export class EmployeeService {
       employeePermissionAttendanceDto;
 
     try {
-      // Validasi input
-      if (!id_employee) {
-        throw new BadRequestException('Employee ID is required');
-      }
-      if (!token_auth) {
-        throw new UnauthorizedException('Token auth is required');
-      }
-      if (!description) {
-        throw new BadRequestException('Description is required');
-      }
-      if (!proof_of_attendance) {
-        throw new BadRequestException('Proof of attendance is required');
-      }
-
       // Verifikasi token auth
       let decoded;
       try {
