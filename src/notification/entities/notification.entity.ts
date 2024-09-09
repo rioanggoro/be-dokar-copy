@@ -11,26 +11,22 @@ import {
 export class Notification {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id_notification: number;
-
-  @Column()
-  employee_id: number;
-
-  @Column('text')
-  token_device: string;
+  @ManyToOne(() => Employee, (employee) => employee.notifications)
+  @JoinColumn({ name: 'employee_id' })
+  employee: Employee;
 
   @Column('varchar')
   notification_type: string;
 
   @Column('varchar')
-  status: string;
+  description: string;
 
   @Column('varchar')
-  description: string;
+  status: string;
 
   @Column('varchar')
   notification_date: string;
 
-  @ManyToOne(() => Employee, (employee) => employee.notifications)
-  @JoinColumn({ name: 'employee_id' })
-  employee: Employee;
+  @Column({ type: 'text' })
+  token_auth: string;
 }

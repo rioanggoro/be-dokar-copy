@@ -25,7 +25,7 @@ import { VerifyOtpEmployeeDto } from './dto/verifyotp-employee.dto';
 import { ChangePasswordEmployeeDto } from './dto/change_password-employee.dto';
 import { PermissionAttendanceEmployeeDto } from 'src/employee/dto/permission_attendance-employee.dto';
 import { Notification } from 'src/notification/entities/notification.entity';
-import { CreateNotificationDto } from './dto/notification-employee.dto';
+import { CreateNotificationDto } from './dto/create-notification.dto';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -408,48 +408,23 @@ export class EmployeeService {
     }
   }
 
-  // Method to create a notification for an employee
-  async createNotificationForEmployeeWithAuth(
-    id_employee: number,
-    token_auth: string,
+  async createNotification(
     createNotificationDto: CreateNotificationDto,
-  ): Promise<any> {
-    {
-      const { notification_type, description, status } = createNotificationDto;
+    token_auth: string, // Tambahkan token_auth sebagai parameter
+  ): Promise<Notification> {
+    const { id_employee, notification_type, description, status } =
+      createNotificationDto;
 
-      // Mencari employee berdasarkan id_employee
-      const employee = await this.employeeRepository.findOne({
-        where: { id_employee },
-      });
+    const newNotification = this.notificationRepository.create({
+      employee: { id_employee }, // Assign the employee based on id_employee
+      notification_type,
+      description,
+      status,
+      notification_date: new Date().toISOString(), // Set current date
+      token_auth, // Simpan token_auth yang diambil dari Bearer Token
+    });
 
-      if (!employee) {
-        throw new NotFoundException('Employee tidak ditemukan');
-      }
-
-      // Memvalidasi token_auth yang dikirimkan dengan yang ada di database
-      if (employee.token_auth !== token_auth) {
-        throw new UnauthorizedException(
-          'Token tidak valid, akses tidak diizinkan',
-        );
-      }
-
-      // Membuat notifikasi baru
-      const newNotification = this.notificationRepository.create({
-        employee,
-        notification_type,
-        description,
-        status,
-        notification_date: new Date().toISOString(), // Tanggal saat ini
-      });
-
-      await this.notificationRepository.save(newNotification);
-
-      return {
-        statusCode: 201,
-        status: 'success',
-        message: 'Notifikasi berhasil dibuat',
-        notification: newNotification,
-      };
-    }
+    // Simpan notifikasi baru ke dalam database
+    return await this.notificationRepository.save(newNotification);
   }
 }
