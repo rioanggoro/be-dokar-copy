@@ -24,6 +24,8 @@ import { SendOtpEmployeeDto } from './dto/sendotp-employee.dto';
 import { VerifyOtpEmployeeDto } from './dto/verifyotp-employee.dto';
 import { ChangePasswordEmployeeDto } from './dto/change_password-employee.dto';
 import { PermissionAttendanceEmployeeDto } from 'src/employee/dto/permission_attendance-employee.dto';
+import { Notification } from 'src/notification/entities/notification.entity';
+import { CreateNotificationDto } from './dto/notification-employee.dto';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -38,6 +40,8 @@ export class EmployeeService {
     private companyRepository: Repository<Company>,
     @InjectRepository(PermissionAttendance)
     private permissionAttendanceRepository: Repository<PermissionAttendance>,
+    @InjectRepository(Notification)
+    private notificationRepository: Repository<Notification>,
 
     private jwtService: JwtService, // Injeksi JwtService
   ) {}
@@ -403,5 +407,46 @@ export class EmployeeService {
       console.error('Error changing password:', error);
       throw new InternalServerErrorException('Error changing password');
     }
+  }
+
+  // Method to create a notification for an employee
+  async createNotification(
+    id_employee: number,
+    token_auth: string,
+    createNotificationDto: CreateNotificationDto,
+  ): Promise<any> {
+    const { notification_type, description, status } = createNotificationDto;
+
+    // Find the employee using the provided id_employee
+    const employee = await this.employeeRepository.findOne({
+      where: { id_employee },
+    });
+
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    // Verify the token_auth matches the employee's token
+    if (employee.token_auth !== token_auth) {
+      throw new UnauthorizedException('Invalid token, unauthorized request');
+    }
+
+    // Create a new notification entity
+    const newNotification = this.notificationRepository.create({
+      employee,
+      notification_type,
+      description,
+      status,
+      notification_date: new Date().toISOString(), // Set the current date
+    });
+
+    await this.notificationRepository.save(newNotification);
+
+    return {
+      statusCode: 201,
+      status: 'success',
+      message: 'Notification created successfully',
+      notification: newNotification,
+    };
   }
 }

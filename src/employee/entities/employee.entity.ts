@@ -7,12 +7,13 @@ import {
   JoinColumn,
   OneToOne,
   ManyToOne,
-  OneToMany
+  OneToMany,
 } from 'typeorm';
 import { Company } from 'src/company/entities/company.entity';
 import { GeneralInforamtion } from 'src/general_inforamtion/entities/general_inforamtion.entity';
 import { JobInformation } from 'src/job_information/entities/job_information.entity';
 import { PermissionAttendance } from 'src/permission_attendance/entities/permission_attendance.entity';
+import { Notification } from 'src/notification/entities/notification.entity';
 
 @Entity('employee')
 export class Employee {
@@ -63,10 +64,14 @@ export class Employee {
   @Column({ type: 'integer' })
   shift_attendance_id: number;
 
-   //Relasi ke tabel permission_attendance
+  //Relasi ke tabel permission_attendance
   @OneToMany(
     () => PermissionAttendance,
     (permissionAttendance) => permissionAttendance.employee,
   )
   permissionAttendances: PermissionAttendance[];
+
+  //1 karyawan punya banyak notifikasi
+  @OneToMany(() => Notification, (notification) => notification.employee)
+  notifications: Notification[];
 }

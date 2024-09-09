@@ -17,6 +17,7 @@ import { SendOtpEmployeeDto } from './dto/sendotp-employee.dto';
 import { VerifyOtpEmployeeDto } from './dto/verifyotp-employee.dto';
 import { ChangePasswordEmployeeDto } from './dto/change_password-employee.dto';
 import { PermissionAttendanceEmployeeDto } from './dto/permission_attendance-employee.dto';
+import { CreateNotificationDto } from './dto/notification-employee.dto';
 
 @Controller('employee')
 export class EmployeeController {
@@ -89,5 +90,15 @@ export class EmployeeController {
     @Body() employeeChangePasswordDto: ChangePasswordEmployeeDto,
   ) {
     return this.employeeService.changePassword(employeeChangePasswordDto);
+  }
+
+  @Post('notification')
+  @UseGuards(ThrottlerGuard)
+  @Throttle(10, 60)
+  @UseFilters(HttpExceptionFilter)
+  async createNotification(
+    @Body() createNotificationDto: CreateNotificationDto,
+  ) {
+    return this.employeeService.createNotification(createNotificationDto);
   }
 }

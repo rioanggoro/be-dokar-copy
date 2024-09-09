@@ -9,6 +9,7 @@ import { CompanyModule } from './company/company.module';
 import { JobInformationModule } from 'src/job_information/job_information.module';
 import { GeneralInforamtionModule } from './general_inforamtion/general_inforamtion.module';
 import { PermissionAttendanceModule } from './permission_attendance/permission_attendance.module';
+import { NotificationModule } from './notification/notification.module';
 
 
 @Module({
@@ -33,6 +34,7 @@ import { PermissionAttendanceModule } from './permission_attendance/permission_a
     CompanyModule,
     GeneralInforamtionModule,
     JobInformationModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
