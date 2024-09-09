@@ -123,31 +123,4 @@ export class EmployeeController {
       },
     };
   }
-
-  // @Post('notification')
-  // @UseGuards(ThrottlerGuard)
-  // @Throttle(50, 300)
-  // @UseFilters(HttpExceptionFilter)
-  // // async createNotification(
-  // //   @Body('id_employee') id_employee: number,
-  // // ): Promise<any> {
-  // //   const notifications =
-  // //     await this.employeeService.getNotificationsForEmployee(id_employee);
-
-  // //   if (!notifications || notifications.length === 0) {
-  // //     throw new NotFoundException('No notifications found for this employee');
-  // //   }
-
-  // //   return {
-  // //     status_code: 200,
-  // //     status: 'success',
-  // //     message: 'successfully get all notification',
-  // //     notification: notifications.map((notification) => ({
-  // //       title_notification: notification.notification_type,
-  // //       description_notification: notification.description,
-  // //       date: notification.notification_date,
-  // //       status: notification.status,
-  // //     })),
-  // //   };
-  // // }
 }

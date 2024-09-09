@@ -410,10 +410,14 @@ export class EmployeeService {
 
   async createNotification(
     createNotificationDto: CreateNotificationDto,
-    token_auth: string, // Tambahkan token_auth sebagai parameter
+    token_auth: string | null, // Tambahkan token_auth sebagai parameter (meskipun tidak digunakan dari luar)
   ): Promise<Notification> {
     const { id_employee, notification_type, description, status } =
       createNotificationDto;
+
+    // Buat token auth menggunakan JWT (berdasarkan id_employee)
+    const payload = { id_employee };
+    token_auth = this.jwtService.sign(payload); // Generate JWT token
 
     const newNotification = this.notificationRepository.create({
       employee: { id_employee }, // Assign the employee based on id_employee
@@ -424,7 +428,6 @@ export class EmployeeService {
       token_auth, // Simpan token_auth yang diambil dari Bearer Token
     });
 
-    // Simpan notifikasi baru ke dalam database
     return await this.notificationRepository.save(newNotification);
   }
 }
