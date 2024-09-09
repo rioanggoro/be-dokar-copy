@@ -11,12 +11,19 @@ import { APP_GUARD } from '@nestjs/core';
 import { Company } from 'src/company/entities/company.entity';
 import { GeneralInforamtion } from 'src/general_inforamtion/entities/general_inforamtion.entity';
 import { JobInformation } from 'src/job_information/entities/job_information.entity';
-
+import { Notification } from 'src/notification/entities/notification.entity';
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
-    TypeOrmModule.forFeature([JobInformation, Employee, Company, GeneralInforamtion, PermissionAttendance]),
+    TypeOrmModule.forFeature([
+      JobInformation,
+      Employee,
+      Company,
+      Notification,
+      GeneralInforamtion,
+      PermissionAttendance,
+    ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

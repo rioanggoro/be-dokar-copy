@@ -117,7 +117,6 @@ export class EmployeeService {
       statusCode: 201,
       status: 'success',
       message: 'Register successful',
-      token_auth: token_auth,
       catch() {
         throw new InternalServerErrorException(
           'Internal server error occurred while processing the request',
@@ -410,43 +409,47 @@ export class EmployeeService {
   }
 
   // Method to create a notification for an employee
-  async createNotification(
+  async createNotificationForEmployeeWithAuth(
     id_employee: number,
     token_auth: string,
     createNotificationDto: CreateNotificationDto,
   ): Promise<any> {
-    const { notification_type, description, status } = createNotificationDto;
+    {
+      const { notification_type, description, status } = createNotificationDto;
 
-    // Find the employee using the provided id_employee
-    const employee = await this.employeeRepository.findOne({
-      where: { id_employee },
-    });
+      // Mencari employee berdasarkan id_employee
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+      });
 
-    if (!employee) {
-      throw new NotFoundException('Employee not found');
+      if (!employee) {
+        throw new NotFoundException('Employee tidak ditemukan');
+      }
+
+      // Memvalidasi token_auth yang dikirimkan dengan yang ada di database
+      if (employee.token_auth !== token_auth) {
+        throw new UnauthorizedException(
+          'Token tidak valid, akses tidak diizinkan',
+        );
+      }
+
+      // Membuat notifikasi baru
+      const newNotification = this.notificationRepository.create({
+        employee,
+        notification_type,
+        description,
+        status,
+        notification_date: new Date().toISOString(), // Tanggal saat ini
+      });
+
+      await this.notificationRepository.save(newNotification);
+
+      return {
+        statusCode: 201,
+        status: 'success',
+        message: 'Notifikasi berhasil dibuat',
+        notification: newNotification,
+      };
     }
-
-    // Verify the token_auth matches the employee's token
-    if (employee.token_auth !== token_auth) {
-      throw new UnauthorizedException('Invalid token, unauthorized request');
-    }
-
-    // Create a new notification entity
-    const newNotification = this.notificationRepository.create({
-      employee,
-      notification_type,
-      description,
-      status,
-      notification_date: new Date().toISOString(), // Set the current date
-    });
-
-    await this.notificationRepository.save(newNotification);
-
-    return {
-      statusCode: 201,
-      status: 'success',
-      message: 'Notification created successfully',
-      notification: newNotification,
-    };
   }
 }

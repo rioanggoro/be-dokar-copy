@@ -97,8 +97,26 @@ export class EmployeeController {
   @Throttle(10, 60)
   @UseFilters(HttpExceptionFilter)
   async createNotification(
-    @Body() createNotificationDto: CreateNotificationDto,
-  ) {
-    return this.employeeService.createNotification(createNotificationDto);
+    @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
+    @Body('id_employee') id_employee: number, // Ambil id_employee dari body request
+    @Body() createNotificationDto: CreateNotificationDto, // Ambil data notifikasi
+  ): Promise<any> {
+    // Pastikan token ditemukan di header Authorization
+    if (!authHeader) {
+      throw new NotFoundException('Token not found');
+    }
+
+    const token_auth = authHeader.split(' ')[1]; // Ekstrak Bearer token
+
+    if (!token_auth) {
+      throw new UnauthorizedException('Bearer token is missing');
+    }
+
+    // Panggil service untuk membuat notifikasi dengan validasi token dan data notifikasi
+    return this.employeeService.createNotificationForEmployeeWithAuth(
+      id_employee,
+      token_auth,
+      createNotificationDto, // Pastikan Anda mengirimkan createNotificationDto di sini
+    );
   }
 }
