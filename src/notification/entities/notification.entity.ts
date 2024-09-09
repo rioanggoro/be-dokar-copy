@@ -11,6 +11,7 @@ import {
 export class Notification {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id_notification: number;
+
   @ManyToOne(() => Employee, (employee) => employee.notifications)
   @JoinColumn({ name: 'employee_id' })
   employee: Employee;

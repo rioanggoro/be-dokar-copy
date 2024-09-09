@@ -410,24 +410,37 @@ export class EmployeeService {
 
   async createNotification(
     createNotificationDto: CreateNotificationDto,
-    token_auth: string | null, // Tambahkan token_auth sebagai parameter (meskipun tidak digunakan dari luar)
   ): Promise<Notification> {
     const { id_employee, notification_type, description, status } =
       createNotificationDto;
 
-    // Buat token auth menggunakan JWT (berdasarkan id_employee)
+    // Generate token auth menggunakan JWT berdasarkan id_employee
     const payload = { id_employee };
-    token_auth = this.jwtService.sign(payload); // Generate JWT token
+    const token_auth = this.jwtService.sign(payload); // Generate JWT token
 
     const newNotification = this.notificationRepository.create({
-      employee: { id_employee }, // Assign the employee based on id_employee
+      employee: { id_employee }, // Relasi dengan karyawan
       notification_type,
       description,
       status,
-      notification_date: new Date().toISOString(), // Set current date
-      token_auth, // Simpan token_auth yang diambil dari Bearer Token
+      notification_date: new Date().toISOString(),
+      token_auth,
     });
 
     return await this.notificationRepository.save(newNotification);
+  }
+
+  async getNotificationsForEmployee(
+    id_employee: number,
+  ): Promise<Notification[]> {
+    const notifications = await this.notificationRepository.find({
+      where: { employee: { id_employee } }, // Cari berdasarkan id_employee
+    });
+
+    if (!notifications || notifications.length === 0) {
+      throw new NotFoundException('No notifications found for this employee');
+    }
+
+    return notifications;
   }
 }

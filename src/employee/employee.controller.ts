@@ -21,6 +21,7 @@ import { CreateNotificationDto } from './dto/create-notification.dto';
 
 @Controller('employee')
 export class EmployeeController {
+  jwtService: any;
   constructor(private readonly employeeService: EmployeeService) {}
 
   @UseGuards(ThrottlerGuard)
@@ -102,7 +103,6 @@ export class EmployeeController {
     // Panggil service untuk membuat notifikasi
     const notification = await this.employeeService.createNotification(
       createNotificationDto,
-      null, // Kosongkan token_auth jika tidak dibutuhkan
     );
 
     // Berikan respons berhasil
@@ -119,8 +119,57 @@ export class EmployeeController {
         description: notification.description,
         status: notification.status,
         notification_date: notification.notification_date,
-        token_auth: notification.token_auth || null, // Jika token_auth tidak ada, set null
+        token_auth: notification.token_auth || null,
       },
     };
+  }
+
+  @UseGuards(ThrottlerGuard)
+  @Throttle(50, 300)
+  @UseFilters(HttpExceptionFilter)
+  @Post('get-notifications')
+  async getNotificationsForEmployee(
+    @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
+    @Body() body: { id_employee: number }, // Ambil id_employee dari body request
+  ): Promise<any> {
+    if (!authHeader) {
+      throw new UnauthorizedException('No authorization token provided');
+    }
+
+    const token_auth = authHeader.split(' ')[1]; // Token adalah bagian kedua setelah "Bearer"
+
+    if (!token_auth) {
+      throw new UnauthorizedException('Invalid token format');
+    }
+
+    try {
+      // Verifikasi token JWT
+      const decoded = this.jwtService.verify(token_auth); // Verifikasi token
+
+      // Periksa apakah token cocok dengan id_employee
+      if (decoded.id_employee !== body.id_employee) {
+        throw new UnauthorizedException('Invalid token for this employee');
+      }
+
+      // Dapatkan notifikasi karyawan
+      const notifications =
+        await this.employeeService.getNotificationsForEmployee(
+          body.id_employee,
+        );
+
+      return {
+        status_code: 200,
+        status: 'success',
+        message: 'Successfully retrieved all notifications',
+        notification: notifications.map((notification) => ({
+          title_notification: notification.notification_type,
+          description_notification: notification.description,
+          date: notification.notification_date,
+          status: notification.status,
+        })),
+      };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
   }
 }
