@@ -24,8 +24,8 @@ import { SendOtpEmployeeDto } from './dto/sendotp-employee.dto';
 import { VerifyOtpEmployeeDto } from './dto/verifyotp-employee.dto';
 import { ChangePasswordEmployeeDto } from './dto/change_password-employee.dto';
 import { PermissionAttendanceEmployeeDto } from 'src/employee/dto/permission_attendance-employee.dto';
-import { Notification } from 'src/notification/entities/notification.entity';
-import { CreateNotificationDto } from './dto/create-notification.dto';
+import { CreateClockInDto } from './dto/clock_in-employee.dto';
+import { ClockIn } from 'src/clockin/entities/clockin.entity';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -41,7 +41,7 @@ export class EmployeeService {
     @InjectRepository(PermissionAttendance)
     private permissionAttendanceRepository: Repository<PermissionAttendance>,
     @InjectRepository(Notification)
-    private notificationRepository: Repository<Notification>,
+    private clockInRepository: Repository<ClockIn>,
 
     private jwtService: JwtService, // Injeksi JwtService
   ) {}
@@ -407,40 +407,52 @@ export class EmployeeService {
       throw new InternalServerErrorException('Error changing password');
     }
   }
+  // Fungsi baru untuk create clock-in
+  async createClockIn(
+    token_auth: string,
+    createClockInDto: CreateClockInDto,
+  ): Promise<any> {
+    // Pertama, Anda bisa melakukan validasi token JWT di sini, atau di controller.
 
-  async createNotification(
-    createNotificationDto: CreateNotificationDto,
-  ): Promise<Notification> {
-    const { id_employee, notification_type, description, status } =
-      createNotificationDto;
+    const { id_employee, address, latitude, longitude, photo, date, time } =
+      createClockInDto;
 
-    // Generate token auth menggunakan JWT berdasarkan id_employee
-    const payload = { id_employee };
-    const token_auth = this.jwtService.sign(payload); // Generate JWT token
+    // Buat instance baru dari ClockIn entity
+    const clockIn = new ClockIn();
+    clockIn.address = address;
+    clockIn.latitude = latitude;
+    clockIn.longitude = longitude;
+    clockIn.attendance_photo = photo;
+    clockIn.created_at = date;
+    clockIn.time = time;
 
-    const newNotification = this.notificationRepository.create({
-      employee: { id_employee }, // Relasi dengan karyawan
-      notification_type,
-      description,
-      status,
-      notification_date: new Date().toISOString(),
-      token_auth,
+    // Cek apakah employee dengan id_employee yang diberikan ada di database
+    const employee = await this.employeeRepository.findOne({
+      where: { id_employee },
     });
-
-    return await this.notificationRepository.save(newNotification);
-  }
-
-  async getNotificationsForEmployee(
-    id_employee: number,
-  ): Promise<Notification[]> {
-    const notifications = await this.notificationRepository.find({
-      where: { employee: { id_employee } }, // Cari berdasarkan id_employee
-    });
-
-    if (!notifications || notifications.length === 0) {
-      throw new NotFoundException('No notifications found for this employee');
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
     }
 
-    return notifications;
+    // Hubungkan clock-in dengan employee yang ditemukan
+    clockIn.employee = employee;
+
+    // Simpan clock-in ke database
+    const savedClockIn = await this.clockInRepository.save(clockIn);
+
+    return {
+      status_code: 201,
+      status: 'success',
+      message: 'Clock-in recorded successfully',
+      clockIn: {
+        id_clock_in: savedClockIn.id_clock_in,
+        address: savedClockIn.address,
+        latitude: savedClockIn.latitude,
+        longitude: savedClockIn.longitude,
+        attendance_photo: savedClockIn.attendance_photo,
+        created_at: savedClockIn.created_at,
+        time: savedClockIn.time,
+      },
+    };
   }
 }

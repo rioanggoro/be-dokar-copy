@@ -17,7 +17,7 @@ import { SendOtpEmployeeDto } from './dto/sendotp-employee.dto';
 import { VerifyOtpEmployeeDto } from './dto/verifyotp-employee.dto';
 import { ChangePasswordEmployeeDto } from './dto/change_password-employee.dto';
 import { PermissionAttendanceEmployeeDto } from './dto/permission_attendance-employee.dto';
-import { CreateNotificationDto } from './dto/create-notification.dto';
+import { CreateClockInDto } from './dto/clock_in-employee.dto';
 
 @Controller('employee')
 export class EmployeeController {
@@ -92,82 +92,32 @@ export class EmployeeController {
   ) {
     return this.employeeService.changePassword(employeeChangePasswordDto);
   }
-
   @UseGuards(ThrottlerGuard)
   @Throttle(50, 300)
-  @UseFilters(HttpExceptionFilter)
-  @Post('send-notification')
-  async sendNotification(
-    @Body() createNotificationDto: CreateNotificationDto, // Data dari body
-  ): Promise<any> {
-    // Panggil service untuk membuat notifikasi
-    const notification = await this.employeeService.createNotification(
-      createNotificationDto,
-    );
-
-    // Berikan respons berhasil
-    return {
-      status_code: 201,
-      status: 'success',
-      message: 'Notification sent successfully',
-      notification: {
-        id_notification: notification.id_notification,
-        employee: {
-          id_employee: notification.employee.id_employee,
-        },
-        notification_type: notification.notification_type,
-        description: notification.description,
-        status: notification.status,
-        notification_date: notification.notification_date,
-        token_auth: notification.token_auth || null,
-      },
-    };
-  }
-
-  @UseGuards(ThrottlerGuard)
-  @Throttle(50, 300)
-  @UseFilters(HttpExceptionFilter)
-  @Post('get-notifications')
-  async getNotificationsForEmployee(
-    @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
-    @Body() body: { id_employee: number }, // Ambil id_employee dari body request
+  @Post('clockin')
+  async clockIn(
+    @Headers('Authorization') authHeader: string,
+    @Body() clockInDto: CreateClockInDto,
   ): Promise<any> {
     if (!authHeader) {
-      throw new UnauthorizedException('No authorization token provided');
+      throw new NotFoundException('Token not found');
     }
 
-    const token_auth = authHeader.split(' ')[1]; // Token adalah bagian kedua setelah "Bearer"
-
+    const token_auth = authHeader.split(' ')[1];
     if (!token_auth) {
-      throw new UnauthorizedException('Invalid token format');
+      throw new UnauthorizedException('Bearer token is missing');
     }
 
+    // Verifikasi token JWT
     try {
-      // Verifikasi token JWT
-      const decoded = this.jwtService.verify(token_auth); // Verifikasi token
+      const decoded = this.jwtService.verify(token_auth);
 
-      // Periksa apakah token cocok dengan id_employee
-      if (decoded.id_employee !== body.id_employee) {
+      if (decoded.id_employee !== clockInDto.id_employee) {
         throw new UnauthorizedException('Invalid token for this employee');
       }
 
-      // Dapatkan notifikasi karyawan
-      const notifications =
-        await this.employeeService.getNotificationsForEmployee(
-          body.id_employee,
-        );
-
-      return {
-        status_code: 200,
-        status: 'success',
-        message: 'Successfully retrieved all notifications',
-        notification: notifications.map((notification) => ({
-          title_notification: notification.notification_type,
-          description_notification: notification.description,
-          date: notification.notification_date,
-          status: notification.status,
-        })),
-      };
+      // Panggil service untuk create clockin
+      return this.employeeService.createClockIn(token_auth, clockInDto);
     } catch (error) {
       throw new UnauthorizedException('Invalid or expired token');
     }

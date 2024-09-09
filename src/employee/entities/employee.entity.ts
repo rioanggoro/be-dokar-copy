@@ -13,7 +13,7 @@ import { Company } from 'src/company/entities/company.entity';
 import { GeneralInforamtion } from 'src/general_inforamtion/entities/general_inforamtion.entity';
 import { JobInformation } from 'src/job_information/entities/job_information.entity';
 import { PermissionAttendance } from 'src/permission_attendance/entities/permission_attendance.entity';
-import { Notification } from 'src/notification/entities/notification.entity';
+import { ClockIn } from 'src/clockin/entities/clockin.entity';
 
 @Entity('employee')
 export class Employee {
@@ -71,7 +71,6 @@ export class Employee {
   )
   permissionAttendances: PermissionAttendance[];
 
-  //1 karyawan punya banyak notifikasi
-  @OneToMany(() => Notification, (notification) => notification.employee)
-  notifications: Notification[];
+  @OneToMany(() => ClockIn, (clockin) => clockin.employee)
+  clockins: ClockIn[];
 }

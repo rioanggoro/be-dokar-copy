@@ -11,7 +11,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { Company } from 'src/company/entities/company.entity';
 import { GeneralInforamtion } from 'src/general_inforamtion/entities/general_inforamtion.entity';
 import { JobInformation } from 'src/job_information/entities/job_information.entity';
-import { Notification } from 'src/notification/entities/notification.entity';
+import { ClockIn } from 'src/clockin/entities/clockin.entity';
 
 @Module({
   imports: [
@@ -23,6 +23,7 @@ import { Notification } from 'src/notification/entities/notification.entity';
       Notification,
       GeneralInforamtion,
       PermissionAttendance,
+      ClockIn,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
