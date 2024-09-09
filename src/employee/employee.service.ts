@@ -20,8 +20,10 @@ import { RegisterEmployeeDto } from './dto/register-employee.dto';
 import { LoginEmployeeDto } from './dto/login-employee.dto';
 import { PermissionAttendance } from 'src/permission_attendance/entities/permission_attendance.entity';
 import * as nodemailer from 'nodemailer';
-import { EmployeeSendOtpDto } from './dto/employee-sendotp.dto';
-import { EmployeeVerifyOtpDto } from './dto/employee-verifyotp.dto';
+import { SendOtpEmployeeDto } from './dto/sendotp-employee.dto';
+import { VerifyOtpEmployeeDto } from './dto/verifyotp-employee.dto';
+import { ChangePasswordEmployeeDto } from './dto/change_password-employee.dto';
+import { PermissionAttendanceEmployeeDto } from 'src/employee/dto/permission_attendance-employee.dto';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -54,7 +56,7 @@ export class EmployeeService {
       where: { id_company: id_company },
     });
     if (!company) {
-      throw new NotFoundException('Company not found');
+      throw new NotFoundException('Company not found'); // Tetap di service
     }
 
     // Cari employee berdasarkan id_employee dan id_company
@@ -64,7 +66,7 @@ export class EmployeeService {
     });
 
     if (!employee) {
-      throw new NotFoundException('Employee not found for this company');
+      throw new NotFoundException('Employee not found for this company'); // Tetap di service
     }
 
     // Cek apakah email sudah terdaftar untuk employee ini
@@ -83,52 +85,44 @@ export class EmployeeService {
         throw new BadRequestException('Invalid password');
       }
 
-      // Jika email sudah terdaftar dan password valid, lemparkan error
       throw new InternalServerErrorException(
         'Account is already registered, please use another account',
       );
     }
 
     const hashedPassword = await hashPassword(password);
-    // Update kolom-kolom yang ada pada tabel employee
     employee.email = email;
     employee.password = hashedPassword;
-    employee.company = company; // Assign company
+    employee.company = company;
 
-    // Pastikan generalInformation tidak undefined
     if (!employee.generalInformation) {
       throw new NotFoundException(
         'General Information not found for this employee',
       );
     }
 
-    // Update general_information table
     employee.generalInformation.phone = telephone;
 
-    // Simpan perubahan
     await this.employeeRepository.save(employee);
     await this.generalInformationRepository.save(employee.generalInformation);
 
-    // Generate JWT token
     const payload = { email: employee.email, sub: employee.id_employee };
     const token_auth = await this.jwtService.signAsync(payload);
 
     employee.token_auth = token_auth;
     await this.employeeRepository.save(employee);
 
-    // Mengembalikan response sukses beserta token
     return {
       statusCode: 201,
       status: 'success',
       message: 'Register successful',
       token_auth: token_auth,
+      catch() {
+        throw new InternalServerErrorException(
+          'Internal server error occurred while processing the request',
+        );
+      },
     };
-  }
-
-  catch() {
-    throw new InternalServerErrorException(
-      'Internal server error occurred while processing the request',
-    );
   }
 
   async login(loginEmployeeDto: LoginEmployeeDto) {
@@ -141,14 +135,14 @@ export class EmployeeService {
     });
 
     if (!employee) {
-      throw new InternalServerErrorException('Invalid username or password');
+      throw new InternalServerErrorException('Invalid Email');
     }
 
     // Periksa password
     const isPasswordValid = await comparePassword(password, employee.password);
 
     if (!isPasswordValid) {
-      throw new InternalServerErrorException('Invalid username or password');
+      throw new InternalServerErrorException('Invalid password');
     }
 
     // Buat token JWT
@@ -158,7 +152,7 @@ export class EmployeeService {
     });
 
     return {
-      statusCode: 200,
+      statusCode: 201,
       status: 'success',
       message: 'Login successful',
       user: {
@@ -166,34 +160,19 @@ export class EmployeeService {
         id_employee: employee.id_employee,
         photo: employee.employee_photo,
         department: employee.jobInformation.user_department,
-        // token_device,
         token_auth,
       },
     };
   }
 
   async createPermissionAttendance(
-    token_auth: string, // Parameter token_auth
-    id_employee: number,
-    description: string,
-    proof_of_attendance: string,
+    token_auth: string, // Terima token_auth dari controller
+    employeePermissionAttendanceDto: PermissionAttendanceEmployeeDto,
   ): Promise<any> {
-    try {
-      // Validasi input
-      if (!id_employee) {
-        throw new BadRequestException('Employee ID is required');
-      }
-      if (!token_auth) {
-        throw new UnauthorizedException('Token auth is required');
-      }
-      if (!description) {
-        throw new BadRequestException('Description is required');
-      }
-      if (!proof_of_attendance) {
-        throw new BadRequestException('Proof of attendance is required');
-      }
+    const { id_employee, description, proof_of_attendance } =
+      employeePermissionAttendanceDto;
 
-      // Verifikasi token auth
+    try {
       let decoded;
       try {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -223,7 +202,7 @@ export class EmployeeService {
 
       await this.permissionAttendanceRepository.save(permissionAttendance);
       return {
-        statusCode: 200,
+        statusCode: 201,
         status: 'success',
         message: 'Successfully sent permission attendance',
       };
@@ -246,16 +225,11 @@ export class EmployeeService {
     }
   }
   async sendOTP(
-    employeeSendOtpDto: EmployeeSendOtpDto,
+    employeesendotpdto: SendOtpEmployeeDto,
   ): Promise<{ statusCode: number; status: string; message: string }> {
-    const { email } = employeeSendOtpDto;
+    const { email } = employeesendotpdto;
 
     try {
-      // Validasi email
-      if (!email) {
-        throw new BadRequestException('Email is required');
-      }
-
       // Cari employee berdasarkan email
       const employee = await this.employeeRepository.findOne({
         where: { email },
@@ -266,8 +240,8 @@ export class EmployeeService {
       }
 
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      // const expiresAt = Date.now() + 5 * 60 * 1000; // OTP valid selama 5 menit
-      const expiresAt = Date.now() + 30 * 1000; // OTP valid selama 30 detik
+      const expiresAt = Date.now() + 2 * 60 * 1000; // OTP valid selama 2 menit
+      
 
       // Simpan OTP dan waktu kedaluwarsa dalam memori
       this.otps[email] = { otp, expiresAt, isUsed: false };
@@ -286,11 +260,11 @@ export class EmployeeService {
         to: employee.email,
         subject: 'Kode OTP Reset Password | Jangan beri tahu siapa pun!',
         html: `
-    Hai, pakai kode OTP di bawah ini untuk reset password akunmu.<br><br>
+    Hai, Pakai kode OTP di bawah ini untuk akunmu.<br><br>
 
     <span style="font-size: 24px; color: blue;">${otp}</span><br><br>
 
-    Kode ini berlaku selama 5 menit.<br><br>
+    Kodenya berlaku selama 2 menit.<br><br>
 
     Demi keamananmu, jangan berikan kodenya ke siapa pun!
   `,
@@ -299,7 +273,7 @@ export class EmployeeService {
       await transporter.sendMail(mailOptions);
 
       return {
-        statusCode: 200,
+        statusCode: 201,
         status: 'success',
         message: 'Successfully sent OTP to email',
       };
@@ -319,7 +293,7 @@ export class EmployeeService {
   }
 
   async verifyOTP(
-    employeeVerifyDto: EmployeeVerifyOtpDto,
+    employeeVerifyDto: VerifyOtpEmployeeDto,
   ): Promise<{ statusCode: number; status: string; message: string }> {
     const { email, otp } = employeeVerifyDto;
 
@@ -345,7 +319,13 @@ export class EmployeeService {
       const record = this.otps[email];
 
       if (!record) {
-        throw new NotFoundException('OTP not found');
+        throw new NotFoundException('OTP not found or already used');
+      }
+
+      // Validasi apakah OTP telah kedaluwarsa
+      if (record.expiresAt < Date.now()) {
+        delete this.otps[email]; // Hapus OTP yang kedaluwarsa
+        throw new UnauthorizedException('OTP has expired');
       }
 
       // Ubah OTP yang diterima menjadi string
@@ -354,22 +334,11 @@ export class EmployeeService {
         throw new UnauthorizedException('Invalid OTP');
       }
 
-      // Periksa apakah OTP telah digunakan
-      if (record.isUsed) {
-        throw new UnauthorizedException('OTP has already been used');
-      }
-
-      // Validasi apakah OTP telah kedaluwarsa
-      if (record.expiresAt < Date.now()) {
-        delete this.otps[email]; // Hapus OTP yang kedaluwarsa
-        throw new UnauthorizedException('OTP has expired'); //otp expired apabila otp tidak diinput selama waktu yang ditentukan
-      }
-
-      //Setelah berhasil verifikasi, OTP akan di hapus dari memori
-      record.isUsed = true;
+      // Hapus OTP setelah verifikasi sukses
+      delete this.otps[email];
 
       return {
-        statusCode: 200,
+        statusCode: 201,
         status: 'success',
         message: 'Successfully verified OTP',
       };
@@ -384,6 +353,58 @@ export class EmployeeService {
 
       // Tangani error yang tidak terduga
       throw new InternalServerErrorException('Error verifying OTP');
+    }
+  }
+
+  async changePassword(
+    employeeChangePasswordDto: ChangePasswordEmployeeDto,
+  ): Promise<{ statusCode: number; status: string; message: string }> {
+    const { email, new_password } = employeeChangePasswordDto;
+
+    try {
+      // Cari employee berdasarkan email
+      const employee = await this.employeeRepository.findOne({
+        where: { email },
+      });
+
+      if (!employee) {
+        throw new NotFoundException('Employee not found'); // Pengecekan employee di service
+      }
+
+      // Cek apakah password baru sama dengan password lama
+      const isOldPasswordValid = await comparePassword(
+        new_password,
+        employee.password,
+      );
+      if (isOldPasswordValid) {
+        throw new BadRequestException(
+          'New password cannot be the same as the old password',
+        );
+      }
+
+      // Hash password baru
+      const hashedPassword = await hashPassword(new_password);
+
+      // Update password employee
+      employee.password = hashedPassword;
+      await this.employeeRepository.save(employee);
+
+      return {
+        statusCode: 201,
+        status: 'success',
+        message: 'Successfully changed password',
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+
+      // Tangani error yang tidak terduga dan log error internal untuk debugging
+      console.error('Error changing password:', error);
+      throw new InternalServerErrorException('Error changing password');
     }
   }
 }
