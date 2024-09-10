@@ -416,7 +416,6 @@ export class EmployeeService {
       createClockInDto;
 
     try {
-      console.log('Verifying token...');
       let decoded;
       try {
         // Verifikasi token
@@ -429,6 +428,7 @@ export class EmployeeService {
       // Cari employee berdasarkan id_employee
       const employee = await this.employeeRepository.findOne({
         where: { id_employee },
+        relations: ['company'], // Pastikan mengambil data company juga
       });
 
       if (!employee) {
@@ -439,7 +439,57 @@ export class EmployeeService {
         });
       }
 
-      // Simpan clock-in
+      // Ambil informasi perusahaan
+      const company = employee.company;
+      if (!company) {
+        throw new NotFoundException({
+          statusCode: HttpStatus.NOT_FOUND,
+          status: 'Error',
+          message: 'Company not found for this employee',
+        });
+      }
+
+      // Fungsi untuk menghitung jarak menggunakan formula Haversine
+      function calculateDistance(
+        lat1: number,
+        lon1: number,
+        lat2: number,
+        lon2: number,
+      ): number {
+        const R = 6371000; // Radius bumi dalam meter
+        const dLat = (lat2 - lat1) * (Math.PI / 180);
+        const dLon = (lon2 - lon1) * (Math.PI / 180);
+
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(lat1 * (Math.PI / 180)) *
+            Math.cos(lat2 * (Math.PI / 180)) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
+
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = R * c; // Jarak dalam meter
+        return distance;
+      }
+
+      // Hitung jarak antara lokasi clock-in dan lokasi perusahaan
+      const distance = calculateDistance(
+        company.latitude,
+        company.longitude,
+        latitude,
+        longitude,
+      );
+
+      // Periksa apakah jarak dalam radius yang diizinkan (misal radius dalam meter)
+      if (distance > company.set_radius) {
+        throw new BadRequestException({
+          statusCode: HttpStatus.BAD_REQUEST,
+          status: 'Error',
+          message: `Clock-in location is outside the allowed radius (${company.set_radius} meters)`,
+        });
+      }
+
+      // Simpan clock-in jika jarak dalam radius
       const clockIn = new ClockIn();
       clockIn.address = address;
       clockIn.latitude = latitude;
@@ -454,10 +504,10 @@ export class EmployeeService {
       return {
         statusCode: 201,
         status: 'success',
-        message: 'Successfully recorded clock-in',
+        message: 'Successfully clock in',
+        radius: company.set_radius,
       };
     } catch (error) {
-      console.error('Error during clock-in:', error);
       if (
         error instanceof BadRequestException ||
         error instanceof NotFoundException ||
@@ -469,7 +519,7 @@ export class EmployeeService {
         {
           statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
           status: 'Error',
-          message: 'Error while recording clock-in',
+          message: 'Error clock in',
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
