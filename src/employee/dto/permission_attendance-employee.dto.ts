@@ -2,6 +2,7 @@ import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
 export class PermissionAttendanceEmployeeDto {
   @IsNumber()
+  @IsNotEmpty()
   id_employee: number;
 
   @IsString()

@@ -505,7 +505,7 @@ export class EmployeeService {
         statusCode: 201,
         status: 'success',
         message: 'Successfully clock in',
-        radius: company.set_radius,
+        // radius: company.set_radius,
       };
     } catch (error) {
       if (
