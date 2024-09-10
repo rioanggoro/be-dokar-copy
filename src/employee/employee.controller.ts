@@ -19,6 +19,7 @@ import { ChangePasswordEmployeeDto } from './dto/change_password-employee.dto';
 import { PermissionAttendanceEmployeeDto } from './dto/permission_attendance-employee.dto';
 import { CreateClockInDto } from './dto/clock_in-employee.dto';
 import { CreateClockOutDto } from './dto/clock_out-employee.dto';
+import { DebtRequestEmployeeDto } from './dto/debt_request-employee.dto';
 
 @Controller('employee')
 export class EmployeeController {
@@ -140,6 +141,31 @@ export class EmployeeController {
     return this.employeeService.createClockOut(
       token_auth, // Teruskan token ke service
       createClockOutDto,
+    );
+  }
+
+  @UseGuards(ThrottlerGuard)
+  @Throttle(50, 300)
+  @Post('debt/request')
+  async createDebtRequest(
+    @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
+    @Body() debtRequestEmployeeDto: DebtRequestEmployeeDto,
+  ): Promise<any> {
+    // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
+    if (!authHeader) {
+      throw new NotFoundException('Token not found');
+    }
+
+    const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization
+
+    if (!token_auth) {
+      throw new UnauthorizedException('Bearer token is missing');
+    }
+
+    // Panggil service untuk membuat permintaan hutang dengan DTO dan token
+    return this.employeeService.debtRequest(
+      token_auth, // Teruskan token ke service
+      debtRequestEmployeeDto, // Teruskan DTO ke service
     );
   }
 }

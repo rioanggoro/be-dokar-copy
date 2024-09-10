@@ -13,6 +13,7 @@ import { GeneralInforamtion } from 'src/general_inforamtion/entities/general_inf
 import { JobInformation } from 'src/job_information/entities/job_information.entity';
 import { ClockIn } from 'src/clockin/entities/clockin.entity';
 import { ClockOut } from 'src/clockout/entities/clockout.entity';
+import { DebtRequest } from 'src/debt_request/entities/debt_request.entity';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ClockOut } from 'src/clockout/entities/clockout.entity';
       PermissionAttendance,
       ClockIn,
       ClockOut,
+      DebtRequest,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

@@ -15,6 +15,7 @@ import { JobInformation } from 'src/job_information/entities/job_information.ent
 import { PermissionAttendance } from 'src/permission_attendance/entities/permission_attendance.entity';
 import { ClockIn } from 'src/clockin/entities/clockin.entity';
 import { ClockOut } from 'src/clockout/entities/clockout.entity';
+import { DebtRequest } from 'src/debt_request/entities/debt_request.entity';
 
 @Entity('employee')
 export class Employee {
@@ -76,4 +77,8 @@ export class Employee {
   clockins: ClockIn[];
   @OneToMany(() => ClockOut, (clockout) => clockout.employee)
   clockouts: ClockOut[];
+
+  //Relasi ke tabel debt_request
+  @OneToMany(() => DebtRequest, (debtRequest) => debtRequest.employee)
+  debtRequests: DebtRequest[];
 }

@@ -11,6 +11,7 @@ import { GeneralInforamtionModule } from './general_inforamtion/general_inforamt
 import { PermissionAttendanceModule } from './permission_attendance/permission_attendance.module';
 import { ClockinModule } from './clockin/clockin.module';
 import { ClockoutModule } from './clockout/clockout.module';
+import { DebtRequestModule } from './debt_request/debt_request.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ClockoutModule } from './clockout/clockout.module';
     JobInformationModule,
     ClockinModule,
     ClockoutModule,
+    DebtRequestModule,
   ],
   controllers: [AppController],
   providers: [AppService],

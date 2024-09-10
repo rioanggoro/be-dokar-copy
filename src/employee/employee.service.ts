@@ -28,6 +28,8 @@ import { CreateClockInDto } from './dto/clock_in-employee.dto';
 import { ClockIn } from 'src/clockin/entities/clockin.entity';
 import { ClockOut } from 'src/clockout/entities/clockout.entity';
 import { CreateClockOutDto } from './dto/clock_out-employee.dto';
+import { DebtRequestEmployeeDto } from './dto/debt_request-employee.dto';
+import { DebtRequest } from 'src/debt_request/entities/debt_request.entity';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -46,6 +48,8 @@ export class EmployeeService {
     private clockInRepository: Repository<ClockIn>,
     @InjectRepository(ClockOut)
     private clockOutRepository: Repository<ClockOut>,
+    @InjectRepository(DebtRequest)
+    private debtRequestRepository: Repository<DebtRequest>,
 
     private jwtService: JwtService, // Injeksi JwtService
   ) {}
@@ -647,6 +651,87 @@ export class EmployeeService {
           statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
           status: 'Error',
           message: 'Error clock out',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async debtRequest(
+    token_auth: string, // Terima token_auth dari controller
+    debtRequestEmployeeDto: DebtRequestEmployeeDto, // Menggunakan DTO yang sudah divalidasi
+  ): Promise<any> {
+    const {
+      id_employee,
+      nominal_request,
+      bank_name,
+      account_name,
+      account_number,
+      borrowing_cost,
+      admin_fee,
+      grand_total_request,
+    } = debtRequestEmployeeDto;
+
+    try {
+      let decoded;
+      try {
+        // Verifikasi token JWT
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decoded = this.jwtService.verify(token_auth);
+      } catch (error) {
+        throw new UnauthorizedException('Invalid token');
+      }
+
+      // Cari employee berdasarkan id_employee
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+      });
+
+      if (!employee) {
+        throw new NotFoundException({
+          statusCode: HttpStatus.NOT_FOUND,
+          status: 'Error',
+          message: 'Employee not found',
+        });
+      }
+
+      // Buat objek DebtRequest baru dan isi dengan data dari DTO
+      const debtRequest = new DebtRequest();
+      debtRequest.employee = employee;
+      debtRequest.nominal_request = nominal_request;
+      debtRequest.bank_name = bank_name;
+      debtRequest.account_name = account_name;
+      debtRequest.account_number = account_number;
+      debtRequest.borrowing_cost = borrowing_cost;
+      debtRequest.admin_fee = admin_fee;
+      debtRequest.grand_total_request = grand_total_request;
+      debtRequest.status = 'Pending';
+
+      // Simpan DebtRequest ke dalam database
+      await this.debtRequestRepository.save(debtRequest);
+
+      // Kembalikan respons sukses
+      return {
+        statusCode: 201,
+        status: 'success',
+        message: 'Successfully created debt request',
+        debtRequestId: debtRequest.id_debt_request,
+      };
+    } catch (error) {
+      // Tangani error lainnya
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+      // Tangani error internal
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+          status: 'Error',
+          message: 'Error creating debt request',
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
