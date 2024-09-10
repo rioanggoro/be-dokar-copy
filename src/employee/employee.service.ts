@@ -678,6 +678,7 @@ export class EmployeeService {
       let decoded;
       try {
         // Verifikasi token JWT
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         decoded = this.jwtService.verify(token_auth);
       } catch (error) {
         console.error('JWT Verification Error:', error.message);
