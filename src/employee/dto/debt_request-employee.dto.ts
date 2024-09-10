@@ -33,4 +33,8 @@ export class DebtRequestEmployeeDto {
   @IsNumber()
   @IsNotEmpty()
   grand_total_request: number;
+
+  //   @IsNumber()
+  //   @IsNotEmpty()
+  //   remaining_saldo_debt: number; //Sisa saldo kasbon
 }

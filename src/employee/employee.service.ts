@@ -657,9 +657,10 @@ export class EmployeeService {
     }
   }
 
+  // Fungsi baru untuk create debt request
   async debtRequest(
     token_auth: string, // Terima token_auth dari controller
-    debtRequestEmployeeDto: DebtRequestEmployeeDto, // Menggunakan DTO yang sudah divalidasi
+    debtRequestEmployeeDto: DebtRequestEmployeeDto, // DTO yang sudah divalidasi
   ): Promise<any> {
     const {
       id_employee,
@@ -685,6 +686,7 @@ export class EmployeeService {
       // Cari employee berdasarkan id_employee
       const employee = await this.employeeRepository.findOne({
         where: { id_employee },
+        relations: ['debtRequests'], // Pastikan untuk mengambil relasi debtRequests sebelumnya
       });
 
       if (!employee) {
@@ -695,9 +697,23 @@ export class EmployeeService {
         });
       }
 
+      // Hitung remaining_saldo_debt secara dinamis
+      let previous_saldo = 350000;
+
+      // Periksa apakah ada permintaan hutang sebelumnya
+      if (employee.debtRequests && employee.debtRequests.length > 0) {
+        // Ambil saldo kasbon dari permintaan hutang terakhir
+        const lastDebtRequest =
+          employee.debtRequests[employee.debtRequests.length - 1];
+        previous_saldo = lastDebtRequest.remaining_saldo_debt;
+      }
+
+      // Kurangi nominal_request dari saldo kasbon sebelumnya
+      const remaining_saldo_debt = previous_saldo - grand_total_request;
+
       // Buat objek DebtRequest baru dan isi dengan data dari DTO
       const debtRequest = new DebtRequest();
-      debtRequest.employee = employee;
+      debtRequest.employee = employee; // Hubungkan debt request dengan employee
       debtRequest.nominal_request = nominal_request;
       debtRequest.bank_name = bank_name;
       debtRequest.account_name = account_name;
@@ -705,7 +721,8 @@ export class EmployeeService {
       debtRequest.borrowing_cost = borrowing_cost;
       debtRequest.admin_fee = admin_fee;
       debtRequest.grand_total_request = grand_total_request;
-      debtRequest.status = 'Pending';
+      debtRequest.remaining_saldo_debt = remaining_saldo_debt; // Saldo kasbon yang tersisa
+      debtRequest.status = 'Pending'; // Set status default menjadi "Pending"
 
       // Simpan DebtRequest ke dalam database
       await this.debtRequestRepository.save(debtRequest);
@@ -716,9 +733,10 @@ export class EmployeeService {
         status: 'success',
         message: 'Successfully created debt request',
         debtRequestId: debtRequest.id_debt_request,
+        remaining_saldo_debt: remaining_saldo_debt, // Sertakan saldo kasbon yang tersisa dalam respons
       };
     } catch (error) {
-      // Tangani error lainnya
+      // Tangani error lain
       if (
         error instanceof BadRequestException ||
         error instanceof NotFoundException ||
