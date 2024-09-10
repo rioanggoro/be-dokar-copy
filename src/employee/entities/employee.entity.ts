@@ -14,6 +14,7 @@ import { GeneralInforamtion } from 'src/general_inforamtion/entities/general_inf
 import { JobInformation } from 'src/job_information/entities/job_information.entity';
 import { PermissionAttendance } from 'src/permission_attendance/entities/permission_attendance.entity';
 import { ClockIn } from 'src/clockin/entities/clockin.entity';
+import { ClockOut } from 'src/clockout/entities/clockout.entity';
 
 @Entity('employee')
 export class Employee {
@@ -73,4 +74,6 @@ export class Employee {
 
   @OneToMany(() => ClockIn, (clockin) => clockin.employee)
   clockins: ClockIn[];
+  @OneToMany(() => ClockOut, (clockout) => clockout.employee)
+  clockouts: ClockOut[];
 }

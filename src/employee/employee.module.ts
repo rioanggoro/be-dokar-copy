@@ -12,6 +12,7 @@ import { Company } from 'src/company/entities/company.entity';
 import { GeneralInforamtion } from 'src/general_inforamtion/entities/general_inforamtion.entity';
 import { JobInformation } from 'src/job_information/entities/job_information.entity';
 import { ClockIn } from 'src/clockin/entities/clockin.entity';
+import { ClockOut } from 'src/clockout/entities/clockout.entity';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ClockIn } from 'src/clockin/entities/clockin.entity';
       GeneralInforamtion,
       PermissionAttendance,
       ClockIn,
+      ClockOut,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

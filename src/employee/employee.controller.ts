@@ -18,6 +18,7 @@ import { VerifyOtpEmployeeDto } from './dto/verifyotp-employee.dto';
 import { ChangePasswordEmployeeDto } from './dto/change_password-employee.dto';
 import { PermissionAttendanceEmployeeDto } from './dto/permission_attendance-employee.dto';
 import { CreateClockInDto } from './dto/clock_in-employee.dto';
+import { CreateClockOutDto } from './dto/clock_out-employee.dto';
 
 @Controller('employee')
 export class EmployeeController {
@@ -114,6 +115,31 @@ export class EmployeeController {
     return this.employeeService.createClockIn(
       token_auth, // Teruskan token ke service
       createClockInDto,
+    );
+  }
+
+  @UseGuards(ThrottlerGuard)
+  @Throttle(50, 300)
+  @Post('clockout')
+  async createClockOut(
+    @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
+    @Body() createClockOutDto: CreateClockOutDto,
+  ): Promise<any> {
+    // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
+    if (!authHeader) {
+      throw new NotFoundException('Token not found');
+    }
+
+    const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization
+
+    if (!token_auth) {
+      throw new UnauthorizedException('Bearer token is missing');
+    }
+
+    // Panggil service untuk melakukan operasi createClockIn dengan DTO dan token
+    return this.employeeService.createClockOut(
+      token_auth, // Teruskan token ke service
+      createClockOutDto,
     );
   }
 }

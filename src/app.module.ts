@@ -10,6 +10,7 @@ import { JobInformationModule } from 'src/job_information/job_information.module
 import { GeneralInforamtionModule } from './general_inforamtion/general_inforamtion.module';
 import { PermissionAttendanceModule } from './permission_attendance/permission_attendance.module';
 import { ClockinModule } from './clockin/clockin.module';
+import { ClockoutModule } from './clockout/clockout.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { ClockinModule } from './clockin/clockin.module';
     GeneralInforamtionModule,
     JobInformationModule,
     ClockinModule,
+    ClockoutModule,
   ],
   controllers: [AppController],
   providers: [AppService],
