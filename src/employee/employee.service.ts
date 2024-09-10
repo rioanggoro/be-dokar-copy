@@ -659,8 +659,8 @@ export class EmployeeService {
 
   // Fungsi baru untuk create debt request
   async debtRequest(
-    token_auth: string, // Terima token_auth dari controller
-    debtRequestEmployeeDto: DebtRequestEmployeeDto, // DTO yang sudah divalidasi
+    token_auth: string,
+    debtRequestEmployeeDto: DebtRequestEmployeeDto,
   ): Promise<any> {
     const {
       id_employee,
@@ -671,25 +671,26 @@ export class EmployeeService {
       borrowing_cost,
       admin_fee,
       grand_total_request,
+      remaining_saldo_debt, // Terima remaining_saldo_debt dari client
     } = debtRequestEmployeeDto;
 
     try {
       let decoded;
       try {
         // Verifikasi token JWT
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         decoded = this.jwtService.verify(token_auth);
       } catch (error) {
+        console.error('JWT Verification Error:', error.message);
         throw new UnauthorizedException('Invalid token');
       }
 
       // Cari employee berdasarkan id_employee
       const employee = await this.employeeRepository.findOne({
         where: { id_employee },
-        relations: ['debtRequests'], // Pastikan untuk mengambil relasi debtRequests sebelumnya
       });
 
       if (!employee) {
+        console.error('Employee not found for id_employee:', id_employee);
         throw new NotFoundException({
           statusCode: HttpStatus.NOT_FOUND,
           status: 'Error',
@@ -697,19 +698,14 @@ export class EmployeeService {
         });
       }
 
-      // Hitung remaining_saldo_debt secara dinamis
-      let previous_saldo = 350000;
-
-      // Periksa apakah ada permintaan hutang sebelumnya
-      if (employee.debtRequests && employee.debtRequests.length > 0) {
-        // Ambil saldo kasbon dari permintaan hutang terakhir
-        const lastDebtRequest =
-          employee.debtRequests[employee.debtRequests.length - 1];
-        previous_saldo = lastDebtRequest.remaining_saldo_debt;
+      // Validasi apakah saldo mencukupi
+      if (remaining_saldo_debt < nominal_request) {
+        throw new BadRequestException({
+          statusCode: HttpStatus.BAD_REQUEST,
+          status: 'Error',
+          message: 'Insufficient remaining saldo kasbon',
+        });
       }
-
-      // Kurangi nominal_request dari saldo kasbon sebelumnya
-      const remaining_saldo_debt = previous_saldo - grand_total_request;
 
       // Buat objek DebtRequest baru dan isi dengan data dari DTO
       const debtRequest = new DebtRequest();
@@ -721,22 +717,28 @@ export class EmployeeService {
       debtRequest.borrowing_cost = borrowing_cost;
       debtRequest.admin_fee = admin_fee;
       debtRequest.grand_total_request = grand_total_request;
-      debtRequest.remaining_saldo_debt = remaining_saldo_debt; // Saldo kasbon yang tersisa
       debtRequest.status = 'Pending'; // Set status default menjadi "Pending"
 
-      // Simpan DebtRequest ke dalam database
+      // Simpan DebtRequest ke dalam database tanpa menyimpan remaining_saldo_debt
       await this.debtRequestRepository.save(debtRequest);
 
-      // Kembalikan respons sukses
+      // Hitung saldo yang tersisa setelah pengajuan ini (jika diperlukan oleh client)
+      const updated_remaining_saldo_debt =
+        remaining_saldo_debt - grand_total_request;
+
+      // Kembalikan respons sukses bersama dengan saldo yang tersisa
       return {
         statusCode: 201,
         status: 'success',
         message: 'Successfully created debt request',
         debtRequestId: debtRequest.id_debt_request,
-        remaining_saldo_debt: remaining_saldo_debt, // Sertakan saldo kasbon yang tersisa dalam respons
+        remaining_saldo_debt: updated_remaining_saldo_debt, // Kembalikan saldo kasbon yang tersisa setelah pengajuan
       };
     } catch (error) {
-      // Tangani error lain
+      // Log detail error
+      console.error('Error in debtRequest function:', error.message);
+
+      // Tangani error lainnya
       if (
         error instanceof BadRequestException ||
         error instanceof NotFoundException ||
@@ -744,6 +746,7 @@ export class EmployeeService {
       ) {
         throw error;
       }
+
       // Tangani error internal
       throw new HttpException(
         {

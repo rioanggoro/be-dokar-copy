@@ -32,9 +32,6 @@ export class DebtRequest {
   created_at: string;
 
   @Column({ type: 'double precision', precision: 10, scale: 2 })
-  remaining_saldo_debt: number;
-
-  @Column({ type: 'double precision', precision: 10, scale: 2 })
   nominal_request: number;
 
   @Column({ type: 'double precision', precision: 10, scale: 2 })
