@@ -40,7 +40,7 @@ export class EmployeeService {
     private companyRepository: Repository<Company>,
     @InjectRepository(PermissionAttendance)
     private permissionAttendanceRepository: Repository<PermissionAttendance>,
-    @InjectRepository(Notification)
+    @InjectRepository(ClockIn)
     private clockInRepository: Repository<ClockIn>,
 
     private jwtService: JwtService, // Injeksi JwtService
@@ -409,50 +409,70 @@ export class EmployeeService {
   }
   // Fungsi baru untuk create clock-in
   async createClockIn(
-    token_auth: string,
+    token_auth: string, // Terima token_auth dari controller
     createClockInDto: CreateClockInDto,
   ): Promise<any> {
-    // Pertama, Anda bisa melakukan validasi token JWT di sini, atau di controller.
-
     const { id_employee, address, latitude, longitude, photo, date, time } =
       createClockInDto;
 
-    // Buat instance baru dari ClockIn entity
-    const clockIn = new ClockIn();
-    clockIn.address = address;
-    clockIn.latitude = latitude;
-    clockIn.longitude = longitude;
-    clockIn.attendance_photo = photo;
-    clockIn.created_at = date;
-    clockIn.time = time;
+    try {
+      console.log('Verifying token...');
+      let decoded;
+      try {
+        // Verifikasi token
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decoded = this.jwtService.verify(token_auth);
+      } catch (error) {
+        throw new UnauthorizedException('Invalid token');
+      }
 
-    // Cek apakah employee dengan id_employee yang diberikan ada di database
-    const employee = await this.employeeRepository.findOne({
-      where: { id_employee },
-    });
-    if (!employee) {
-      throw new NotFoundException('Employee not found');
+      // Cari employee berdasarkan id_employee
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+      });
+
+      if (!employee) {
+        throw new NotFoundException({
+          statusCode: HttpStatus.NOT_FOUND,
+          status: 'Error',
+          message: 'Employee not found',
+        });
+      }
+
+      // Simpan clock-in
+      const clockIn = new ClockIn();
+      clockIn.address = address;
+      clockIn.latitude = latitude;
+      clockIn.longitude = longitude;
+      clockIn.attendance_photo = photo;
+      clockIn.created_at = date;
+      clockIn.time = time;
+      clockIn.employee = employee;
+
+      await this.clockInRepository.save(clockIn);
+
+      return {
+        statusCode: 201,
+        status: 'success',
+        message: 'Successfully recorded clock-in',
+      };
+    } catch (error) {
+      console.error('Error during clock-in:', error);
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+          status: 'Error',
+          message: 'Error while recording clock-in',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
-
-    // Hubungkan clock-in dengan employee yang ditemukan
-    clockIn.employee = employee;
-
-    // Simpan clock-in ke database
-    const savedClockIn = await this.clockInRepository.save(clockIn);
-
-    return {
-      status_code: 201,
-      status: 'success',
-      message: 'Clock-in recorded successfully',
-      clockIn: {
-        id_clock_in: savedClockIn.id_clock_in,
-        address: savedClockIn.address,
-        latitude: savedClockIn.latitude,
-        longitude: savedClockIn.longitude,
-        attendance_photo: savedClockIn.attendance_photo,
-        created_at: savedClockIn.created_at,
-        time: savedClockIn.time,
-      },
-    };
   }
 }

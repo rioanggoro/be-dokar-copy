@@ -20,7 +20,6 @@ import { ClockIn } from 'src/clockin/entities/clockin.entity';
       JobInformation,
       Employee,
       Company,
-      Notification,
       GeneralInforamtion,
       PermissionAttendance,
       ClockIn,

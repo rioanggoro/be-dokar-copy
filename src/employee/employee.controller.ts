@@ -95,31 +95,25 @@ export class EmployeeController {
   @UseGuards(ThrottlerGuard)
   @Throttle(50, 300)
   @Post('clockin')
-  async clockIn(
-    @Headers('Authorization') authHeader: string,
-    @Body() clockInDto: CreateClockInDto,
+  async createClockIn(
+    @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
+    @Body() createClockInDto: CreateClockInDto,
   ): Promise<any> {
+    // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
     if (!authHeader) {
       throw new NotFoundException('Token not found');
     }
 
-    const token_auth = authHeader.split(' ')[1];
+    const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization
+
     if (!token_auth) {
       throw new UnauthorizedException('Bearer token is missing');
     }
 
-    // Verifikasi token JWT
-    try {
-      const decoded = this.jwtService.verify(token_auth);
-
-      if (decoded.id_employee !== clockInDto.id_employee) {
-        throw new UnauthorizedException('Invalid token for this employee');
-      }
-
-      // Panggil service untuk create clockin
-      return this.employeeService.createClockIn(token_auth, clockInDto);
-    } catch (error) {
-      throw new UnauthorizedException('Invalid or expired token');
-    }
+    // Panggil service untuk melakukan operasi createClockIn dengan DTO dan token
+    return this.employeeService.createClockIn(
+      token_auth, // Teruskan token ke service
+      createClockInDto,
+    );
   }
 }
