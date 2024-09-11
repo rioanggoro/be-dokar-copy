@@ -708,6 +708,15 @@ export class EmployeeService {
         });
       }
 
+      // Validasi apakah saldo mencukupi
+      if (grand_total_request > remaining_saldo_debt) {
+        throw new BadRequestException({
+          statusCode: HttpStatus.BAD_REQUEST,
+          status: 'Error',
+          message: `Your balance is not enough. Available saldo: ${remaining_saldo_debt}`,
+        });
+      }
+
       // Buat objek DebtRequest baru dan isi dengan data dari DTO
       const debtRequest = new DebtRequest();
       debtRequest.employee = employee; // Hubungkan debt request dengan employee
