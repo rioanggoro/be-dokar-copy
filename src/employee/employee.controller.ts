@@ -145,7 +145,8 @@ export class EmployeeController {
   }
 
   @UseGuards(ThrottlerGuard)
-  @Throttle(50, 300)
+  @Throttle(10, 60)
+  @UseFilters(HttpExceptionFilter)
   @Post('debt/request')
   async createDebtRequest(
     @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header

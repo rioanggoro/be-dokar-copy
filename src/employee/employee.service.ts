@@ -30,6 +30,7 @@ import { ClockOut } from 'src/clockout/entities/clockout.entity';
 import { CreateClockOutDto } from './dto/clock_out-employee.dto';
 import { DebtRequestEmployeeDto } from './dto/debt_request-employee.dto';
 import { DebtRequest } from 'src/debt_request/entities/debt_request.entity';
+import { calculateDistance } from 'src/shared/utils/distance.util';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -158,6 +159,9 @@ export class EmployeeService {
       id: employee.id_employee,
       email: employee.email,
     });
+
+    employee.token_auth = token_auth;
+    await this.employeeRepository.save(employee);
 
     return {
       statusCode: 201,
@@ -424,12 +428,20 @@ export class EmployeeService {
       createClockInDto;
 
     try {
-      let decoded;
-      try {
-        // Verifikasi token
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        decoded = this.jwtService.verify(token_auth);
-      } catch (error) {
+      // Verifikasi token
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const token = this.jwtService.verify(token_auth);
+
+      if (!token) {
+        throw new UnauthorizedException('Missing token');
+      }
+
+      // Validasi token terakhir login
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
         throw new UnauthorizedException('Invalid token');
       }
 
@@ -440,44 +452,13 @@ export class EmployeeService {
       });
 
       if (!employee) {
-        throw new NotFoundException({
-          statusCode: HttpStatus.NOT_FOUND,
-          status: 'Error',
-          message: 'Employee not found',
-        });
+        throw new NotFoundException('Employee not found');
       }
 
       // Ambil informasi perusahaan
       const company = employee.company;
       if (!company) {
-        throw new NotFoundException({
-          statusCode: HttpStatus.NOT_FOUND,
-          status: 'Error',
-          message: 'Company not found for this employee',
-        });
-      }
-
-      // Fungsi untuk menghitung jarak menggunakan formula Haversine
-      function calculateDistance(
-        lat1: number,
-        lon1: number,
-        lat2: number,
-        lon2: number,
-      ): number {
-        const R = 6371000; // Radius bumi dalam meter
-        const dLat = (lat2 - lat1) * (Math.PI / 180);
-        const dLon = (lon2 - lon1) * (Math.PI / 180);
-
-        const a =
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(lat1 * (Math.PI / 180)) *
-            Math.cos(lat2 * (Math.PI / 180)) *
-            Math.sin(dLon / 2) *
-            Math.sin(dLon / 2);
-
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const distance = R * c; // Jarak dalam meter
-        return distance;
+        throw new NotFoundException('Company not found for this employee');
       }
 
       // Hitung jarak antara lokasi clock-in dan lokasi perusahaan
@@ -513,7 +494,6 @@ export class EmployeeService {
         statusCode: 201,
         status: 'success',
         message: 'Successfully clock in',
-        // radius: company.set_radius,
       };
     } catch (error) {
       if (
@@ -543,17 +523,19 @@ export class EmployeeService {
       createClockOutDto;
 
     try {
-      console.log('Verifying token...');
-      let decoded;
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        decoded = this.jwtService.verify(token_auth);
-      } catch (error) {
-        console.error('Token verification failed:', error.message);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const token = this.jwtService.verify(token_auth);
+
+      if (!token) {
+        throw new UnauthorizedException('Missing token');
+      }
+      // Validasi token terakhir login
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+      if (!validToken) {
         throw new UnauthorizedException('Invalid token');
       }
-
-      console.log(`Fetching employee with id: ${id_employee}`);
 
       // Cari employee berdasarkan id_employee
       const employee = await this.employeeRepository.findOne({
@@ -562,44 +544,13 @@ export class EmployeeService {
       });
 
       if (!employee) {
-        throw new NotFoundException({
-          statusCode: HttpStatus.NOT_FOUND,
-          status: 'Error',
-          message: 'Employee not found',
-        });
+        throw new NotFoundException('Employee not found');
       }
 
       // Ambil informasi perusahaan
       const company = employee.company;
       if (!company) {
-        throw new NotFoundException({
-          statusCode: HttpStatus.NOT_FOUND,
-          status: 'Error',
-          message: 'Company not found for this employee',
-        });
-      }
-
-      // Fungsi untuk menghitung jarak menggunakan formula Haversine
-      function calculateDistance(
-        lat1: number,
-        lon1: number,
-        lat2: number,
-        lon2: number,
-      ): number {
-        const R = 6371000; // Radius bumi dalam meter
-        const dLat = (lat2 - lat1) * (Math.PI / 180);
-        const dLon = (lon2 - lon1) * (Math.PI / 180);
-
-        const a =
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(lat1 * (Math.PI / 180)) *
-            Math.cos(lat2 * (Math.PI / 180)) *
-            Math.sin(dLon / 2) *
-            Math.sin(dLon / 2);
-
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const distance = R * c; // Jarak dalam meter
-        return distance;
+        throw new NotFoundException('Company not found for this employee');
       }
 
       // Hitung jarak antara lokasi clock-out dan lokasi perusahaan
@@ -636,7 +587,6 @@ export class EmployeeService {
         statusCode: 201,
         status: 'success',
         message: 'Successfully clock out',
-        // radius: company.set_radius,
       };
     } catch (error) {
       if (
@@ -675,13 +625,17 @@ export class EmployeeService {
     } = debtRequestEmployeeDto;
 
     try {
-      let decoded;
-      try {
-        // Verifikasi token JWT
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        decoded = this.jwtService.verify(token_auth);
-      } catch (error) {
-        console.error('JWT Verification Error:', error.message);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const token = this.jwtService.verify(token_auth);
+
+      if (!token) {
+        throw new UnauthorizedException('Missing token');
+      }
+      // Validasi token terakhir login
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+      if (!validToken) {
         throw new UnauthorizedException('Invalid token');
       }
 
@@ -692,29 +646,19 @@ export class EmployeeService {
 
       if (!employee) {
         console.error('Employee not found for id_employee:', id_employee);
-        throw new NotFoundException({
-          statusCode: HttpStatus.NOT_FOUND,
-          status: 'Error',
-          message: 'Employee not found',
-        });
+        throw new NotFoundException('Employee not found');
       }
 
       // Validasi apakah saldo mencukupi
       if (remaining_saldo_debt < nominal_request) {
-        throw new BadRequestException({
-          statusCode: HttpStatus.BAD_REQUEST,
-          status: 'Error',
-          message: 'Insufficient remaining saldo kasbon',
-        });
+        throw new BadRequestException('Insufficient remaining saldo kasbon');
       }
 
       // Validasi apakah saldo mencukupi
       if (grand_total_request > remaining_saldo_debt) {
-        throw new BadRequestException({
-          statusCode: HttpStatus.BAD_REQUEST,
-          status: 'Error',
-          message: `Your balance is not enough. Available saldo: ${remaining_saldo_debt}`,
-        });
+        throw new BadRequestException(
+          `Your balance is not enough. Available saldo: ${remaining_saldo_debt}`,
+        );
       }
 
       // Buat objek DebtRequest baru dan isi dengan data dari DTO
@@ -732,22 +676,13 @@ export class EmployeeService {
       // Simpan DebtRequest ke dalam database tanpa menyimpan remaining_saldo_debt
       await this.debtRequestRepository.save(debtRequest);
 
-      // Hitung saldo yang tersisa setelah pengajuan ini (jika diperlukan oleh client)
-      const updated_remaining_saldo_debt =
-        remaining_saldo_debt - grand_total_request;
-
       // Kembalikan respons sukses bersama dengan saldo yang tersisa
       return {
         statusCode: 201,
         status: 'success',
         message: 'Successfully created debt request',
-        debtRequestId: debtRequest.id_debt_request,
-        remaining_saldo_debt: updated_remaining_saldo_debt, // Kembalikan saldo kasbon yang tersisa setelah pengajuan
       };
     } catch (error) {
-      // Log detail error
-      console.error('Error in debtRequest function:', error.message);
-
       // Tangani error lainnya
       if (
         error instanceof BadRequestException ||
