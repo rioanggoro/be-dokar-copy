@@ -518,14 +518,17 @@ export class EmployeeService {
       createClockOutDto;
 
     try {      
-       try {        
-        return this.jwtService.verify(token_auth); // Verifikasi token JWT
+       let decodedToken;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
       } catch (error) {
         if (error.name === 'JsonWebTokenError') {
-          // Token salah secara format atau sintaks
-          throw new UnauthorizedException('Token does not match');
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
         } else {
-          throw new UnauthorizedException('Invalid token');
+          throw new UnauthorizedException('Token verification failed');
         }
       }
 
@@ -615,14 +618,18 @@ export class EmployeeService {
     } = debtRequestEmployeeDto;
 
     try {
-      try {        
-        return this.jwtService.verify(token_auth); // Verifikasi token JWT
+      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
+      let decodedToken;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
       } catch (error) {
         if (error.name === 'JsonWebTokenError') {
-          // Token salah secara format atau sintaks
-          throw new UnauthorizedException('Token does not match');
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
         } else {
-          throw new UnauthorizedException('Invalid token');
+          throw new UnauthorizedException('Token verification failed');
         }
       }
 
