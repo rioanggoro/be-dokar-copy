@@ -514,19 +514,15 @@ export class EmployeeService {
     const { id_employee, address, latitude, longitude, photo, date, time } =
       createClockOutDto;
 
-    try {
-      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
-      let decodedToken;
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
+    try {      
+       try {        
+        return this.jwtService.verify(token_auth); // Verifikasi token JWT
       } catch (error) {
         if (error.name === 'JsonWebTokenError') {
-          throw new UnauthorizedException('Invalid token format');
-        } else if (error.name === 'TokenExpiredError') {
-          throw new UnauthorizedException('Token expired');
+          // Token salah secara format atau sintaks
+          throw new UnauthorizedException('Token does not match');
         } else {
-          throw new UnauthorizedException('Token verification failed');
+          throw new UnauthorizedException('Invalid token');
         }
       }
 
@@ -616,18 +612,14 @@ export class EmployeeService {
     } = debtRequestEmployeeDto;
 
     try {
-      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
-      let decodedToken;
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
+      try {        
+        return this.jwtService.verify(token_auth); // Verifikasi token JWT
       } catch (error) {
         if (error.name === 'JsonWebTokenError') {
-          throw new UnauthorizedException('Invalid token format');
-        } else if (error.name === 'TokenExpiredError') {
-          throw new UnauthorizedException('Token expired');
+          // Token salah secara format atau sintaks
+          throw new UnauthorizedException('Token does not match');
         } else {
-          throw new UnauthorizedException('Token verification failed');
+          throw new UnauthorizedException('Invalid token');
         }
       }
 

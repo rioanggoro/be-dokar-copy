@@ -27,7 +27,8 @@ export class EmployeeController {
   constructor(private readonly employeeService: EmployeeService) {}
 
   @UseGuards(ThrottlerGuard)
-  @Throttle(50, 300)
+  @Throttle(10, 60)
+  @UseFilters(HttpExceptionFilter)
   @Post('permission-attendance')
   async createPermissionAttendance(
     @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
