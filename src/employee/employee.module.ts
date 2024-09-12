@@ -11,12 +11,23 @@ import { APP_GUARD } from '@nestjs/core';
 import { Company } from 'src/company/entities/company.entity';
 import { GeneralInforamtion } from 'src/general_inforamtion/entities/general_inforamtion.entity';
 import { JobInformation } from 'src/job_information/entities/job_information.entity';
-
+import { ClockIn } from 'src/clockin/entities/clockin.entity';
+import { ClockOut } from 'src/clockout/entities/clockout.entity';
+import { DebtRequest } from 'src/debt_request/entities/debt_request.entity';
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
-    TypeOrmModule.forFeature([JobInformation, Employee, Company, GeneralInforamtion, PermissionAttendance]),
+    TypeOrmModule.forFeature([
+      JobInformation,
+      Employee,
+      Company,
+      GeneralInforamtion,
+      PermissionAttendance,
+      ClockIn,
+      ClockOut,
+      DebtRequest,
+    ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

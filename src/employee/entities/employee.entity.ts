@@ -7,12 +7,15 @@ import {
   JoinColumn,
   OneToOne,
   ManyToOne,
-  OneToMany
+  OneToMany,
 } from 'typeorm';
 import { Company } from 'src/company/entities/company.entity';
 import { GeneralInforamtion } from 'src/general_inforamtion/entities/general_inforamtion.entity';
 import { JobInformation } from 'src/job_information/entities/job_information.entity';
 import { PermissionAttendance } from 'src/permission_attendance/entities/permission_attendance.entity';
+import { ClockIn } from 'src/clockin/entities/clockin.entity';
+import { ClockOut } from 'src/clockout/entities/clockout.entity';
+import { DebtRequest } from 'src/debt_request/entities/debt_request.entity';
 
 @Entity('employee')
 export class Employee {
@@ -63,10 +66,19 @@ export class Employee {
   @Column({ type: 'integer' })
   shift_attendance_id: number;
 
-   //Relasi ke tabel permission_attendance
+  //Relasi ke tabel permission_attendance
   @OneToMany(
     () => PermissionAttendance,
     (permissionAttendance) => permissionAttendance.employee,
   )
   permissionAttendances: PermissionAttendance[];
+
+  @OneToMany(() => ClockIn, (clockin) => clockin.employee)
+  clockins: ClockIn[];
+  @OneToMany(() => ClockOut, (clockout) => clockout.employee)
+  clockouts: ClockOut[];
+
+  //Relasi ke tabel debt_request
+  @OneToMany(() => DebtRequest, (debtRequest) => debtRequest.employee)
+  debtRequests: DebtRequest[];
 }

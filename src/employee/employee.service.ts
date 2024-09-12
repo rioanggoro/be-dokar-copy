@@ -5,8 +5,6 @@ import {
   NotFoundException,
   UseFilters,
   UnauthorizedException,
-  HttpException,
-  HttpStatus,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -24,6 +22,13 @@ import { SendOtpEmployeeDto } from './dto/sendotp-employee.dto';
 import { VerifyOtpEmployeeDto } from './dto/verifyotp-employee.dto';
 import { ChangePasswordEmployeeDto } from './dto/change_password-employee.dto';
 import { PermissionAttendanceEmployeeDto } from 'src/employee/dto/permission_attendance-employee.dto';
+import { CreateClockInDto } from './dto/clock_in-employee.dto';
+import { ClockIn } from 'src/clockin/entities/clockin.entity';
+import { ClockOut } from 'src/clockout/entities/clockout.entity';
+import { CreateClockOutDto } from './dto/clock_out-employee.dto';
+import { DebtRequestEmployeeDto } from './dto/debt_request-employee.dto';
+import { DebtRequest } from 'src/debt_request/entities/debt_request.entity';
+import { calculateDistance } from 'src/shared/utils/distance.util';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -41,6 +46,12 @@ export class EmployeeService {
     private companyRepository: Repository<Company>,
     @InjectRepository(PermissionAttendance)
     private permissionAttendanceRepository: Repository<PermissionAttendance>,
+    @InjectRepository(ClockIn)
+    private clockInRepository: Repository<ClockIn>,
+    @InjectRepository(ClockOut)
+    private clockOutRepository: Repository<ClockOut>,
+    @InjectRepository(DebtRequest)
+    private debtRequestRepository: Repository<DebtRequest>,
 
     private jwtService: JwtService, // Injeksi JwtService
   ) {}
@@ -116,7 +127,6 @@ export class EmployeeService {
       statusCode: 201,
       status: 'success',
       message: 'Register successful',
-      token_auth: token_auth,
       catch() {
         throw new InternalServerErrorException(
           'Internal server error occurred while processing the request',
@@ -151,6 +161,9 @@ export class EmployeeService {
       email: employee.email,
     });
 
+    employee.token_auth = token_auth;
+    await this.employeeRepository.save(employee);
+
     return {
       statusCode: 201,
       status: 'success',
@@ -173,12 +186,18 @@ export class EmployeeService {
       employeePermissionAttendanceDto;
 
     try {
-      let decoded;
+      let decodedToken;
       try {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        decoded = this.jwtService.verify(token_auth);
+        decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
       } catch (error) {
-        throw new UnauthorizedException('Invalid token');
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
       }
 
       // Cari employee berdasarkan id
@@ -187,11 +206,7 @@ export class EmployeeService {
       });
 
       if (!employee) {
-        throw new NotFoundException({
-          statusCode: HttpStatus.NOT_FOUND,
-          status: 'Error',
-          message: 'Employee not found',
-        });
+        throw new NotFoundException('Employee not found');
       }
 
       // Simpan permission attendance
@@ -214,13 +229,8 @@ export class EmployeeService {
       ) {
         throw error;
       }
-      throw new HttpException(
-        {
-          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-          status: 'Error',
-          message: 'Error sent permission attendance',
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR,
+      throw new InternalServerErrorException(
+        'Error sent permission attendance',
       );
     }
   }
@@ -405,6 +415,280 @@ export class EmployeeService {
       // Tangani error yang tidak terduga dan log error internal untuk debugging
       console.error('Error changing password:', error);
       throw new InternalServerErrorException('Error changing password');
+    }
+  }
+  // Fungsi baru untuk create clock-in
+  async createClockIn(
+    token_auth: string, // Terima token_auth dari controller
+    createClockInDto: CreateClockInDto,
+  ): Promise<any> {
+    const { id_employee, address, latitude, longitude, photo, date, time } =
+      createClockInDto;
+
+    try {
+      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
+      let decodedToken;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
+      }
+
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
+        throw new NotFoundException('Token not found');
+      }
+
+      // Cari employee berdasarkan id_employee
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+        relations: ['company'], // Pastikan mengambil data company juga
+      });
+
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      // Ambil informasi perusahaan
+      const company = employee.company;
+      if (!company) {
+        throw new NotFoundException('Company not found for this employee');
+      }
+
+      // Hitung jarak antara lokasi clock-in dan lokasi perusahaan
+      const distance = calculateDistance(
+        company.latitude,
+        company.longitude,
+        latitude,
+        longitude,
+      );
+
+      // Periksa apakah jarak dalam radius yang diizinkan (misal radius dalam meter)
+      if (distance > company.set_radius) {
+        throw new BadRequestException(
+          `Clock-in location is outside the allowed radius (${company.set_radius} meters)`,
+        );
+      }
+
+      // Simpan clock-in jika jarak dalam radius
+      const clockIn = new ClockIn();
+      clockIn.address = address;
+      clockIn.latitude = latitude;
+      clockIn.longitude = longitude;
+      clockIn.attendance_photo = photo;
+      clockIn.created_at = date;
+      clockIn.time = time;
+      clockIn.employee = employee;
+
+      await this.clockInRepository.save(clockIn);
+
+      return {
+        statusCode: 201,
+        status: 'success',
+        message: 'Successfully clock in',
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Error clock in');
+    }
+  }
+
+  // Fungsi baru untuk create clock-out
+  async createClockOut(
+    token_auth: string, // Terima token_auth dari controller
+    createClockOutDto: CreateClockOutDto,
+  ): Promise<any> {
+    const { id_employee, address, latitude, longitude, photo, date, time } =
+      createClockOutDto;
+
+    try {      
+       try {        
+        return this.jwtService.verify(token_auth); // Verifikasi token JWT
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          // Token salah secara format atau sintaks
+          throw new UnauthorizedException('Token does not match');
+        } else {
+          throw new UnauthorizedException('Invalid token');
+        }
+      }
+
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
+        throw new NotFoundException('Token not found');
+      }
+
+      // Cari employee berdasarkan id_employee
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+        relations: ['company'],
+      });
+
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      // Ambil informasi perusahaan
+      const company = employee.company;
+      if (!company) {
+        throw new NotFoundException('Company not found for this employee');
+      }
+
+      // Hitung jarak antara lokasi clock-out dan lokasi perusahaan
+      const distance = calculateDistance(
+        company.latitude,
+        company.longitude,
+        latitude,
+        longitude,
+      );
+
+      // Periksa apakah jarak dalam radius yang diizinkan (misal radius dalam meter)
+      if (distance > company.set_radius) {
+        throw new BadRequestException(
+          `Clock-out location is outside the allowed radius (${company.set_radius} meters)`,
+        );
+      }
+
+      // Simpan clock-out jika jarak dalam radius
+      const clockOut = new ClockOut();
+      clockOut.address = address;
+      clockOut.latitude = latitude;
+      clockOut.longitude = longitude;
+      clockOut.attendance_photo = photo;
+      clockOut.created_at = date;
+      clockOut.time = time;
+      clockOut.employee = employee;
+
+      await this.clockOutRepository.save(clockOut);
+
+      return {
+        statusCode: 201,
+        status: 'success',
+        message: 'Successfully clock out',
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Error clock out');
+    }
+  }
+
+  // Fungsi baru untuk create debt request
+  async debtRequest(
+    token_auth: string,
+    debtRequestEmployeeDto: DebtRequestEmployeeDto,
+  ): Promise<any> {
+    const {
+      id_employee,
+      nominal_request,
+      bank_name,
+      account_name,
+      account_number,
+      borrowing_cost,
+      admin_fee,
+      grand_total_request,
+      remaining_saldo_debt,
+    } = debtRequestEmployeeDto;
+
+    try {
+      try {        
+        return this.jwtService.verify(token_auth); // Verifikasi token JWT
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          // Token salah secara format atau sintaks
+          throw new UnauthorizedException('Token does not match');
+        } else {
+          throw new UnauthorizedException('Invalid token');
+        }
+      }
+
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
+        throw new NotFoundException('Token not found');
+      }
+
+      // Cari employee berdasarkan id_employee
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+      });
+
+      if (!employee) {
+        console.error('Employee not found for id_employee:', id_employee);
+        throw new NotFoundException('Employee not found');
+      }
+
+      // Validasi apakah saldo mencukupi
+      if (remaining_saldo_debt < nominal_request) {
+        throw new BadRequestException('Insufficient remaining saldo kasbon');
+      }
+
+      // Validasi apakah saldo mencukupi
+      if (grand_total_request > remaining_saldo_debt) {
+        throw new BadRequestException(
+          `Your balance is not enough. Available saldo: ${remaining_saldo_debt}`,
+        );
+      }
+
+      // Buat objek DebtRequest baru dan isi dengan data dari DTO
+      const debtRequest = new DebtRequest();
+      debtRequest.employee = employee; // Hubungkan debt request dengan employee
+      debtRequest.nominal_request = nominal_request;
+      debtRequest.bank_name = bank_name;
+      debtRequest.account_name = account_name;
+      debtRequest.account_number = account_number;
+      debtRequest.borrowing_cost = borrowing_cost;
+      debtRequest.admin_fee = admin_fee;
+      debtRequest.grand_total_request = grand_total_request;
+      debtRequest.status = 'Pending'; // Set status default menjadi "Pending"
+
+      // Simpan DebtRequest ke dalam database tanpa menyimpan remaining_saldo_debt
+      await this.debtRequestRepository.save(debtRequest);
+
+      // Kembalikan respons sukses bersama dengan saldo yang tersisa
+      return {
+        statusCode: 201,
+        status: 'success',
+        message: 'Successfully created debt request',
+      };
+    } catch (error) {
+      // Tangani error lainnya
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+
+      // Tangani error internal
+      throw new InternalServerErrorException('Error creating debt request');
     }
   }
 }

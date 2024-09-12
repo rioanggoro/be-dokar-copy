@@ -9,7 +9,9 @@ import { CompanyModule } from './company/company.module';
 import { JobInformationModule } from 'src/job_information/job_information.module';
 import { GeneralInforamtionModule } from './general_inforamtion/general_inforamtion.module';
 import { PermissionAttendanceModule } from './permission_attendance/permission_attendance.module';
-
+import { ClockinModule } from './clockin/clockin.module';
+import { ClockoutModule } from './clockout/clockout.module';
+import { DebtRequestModule } from './debt_request/debt_request.module';
 
 @Module({
   imports: [
@@ -33,6 +35,9 @@ import { PermissionAttendanceModule } from './permission_attendance/permission_a
     CompanyModule,
     GeneralInforamtionModule,
     JobInformationModule,
+    ClockinModule,
+    ClockoutModule,
+    DebtRequestModule,
   ],
   controllers: [AppController],
   providers: [AppService],

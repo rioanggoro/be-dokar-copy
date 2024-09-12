@@ -17,13 +17,18 @@ import { SendOtpEmployeeDto } from './dto/sendotp-employee.dto';
 import { VerifyOtpEmployeeDto } from './dto/verifyotp-employee.dto';
 import { ChangePasswordEmployeeDto } from './dto/change_password-employee.dto';
 import { PermissionAttendanceEmployeeDto } from './dto/permission_attendance-employee.dto';
+import { CreateClockInDto } from './dto/clock_in-employee.dto';
+import { CreateClockOutDto } from './dto/clock_out-employee.dto';
+import { DebtRequestEmployeeDto } from './dto/debt_request-employee.dto';
 
 @Controller('employee')
 export class EmployeeController {
+  jwtService: any;
   constructor(private readonly employeeService: EmployeeService) {}
 
   @UseGuards(ThrottlerGuard)
-  @Throttle(50, 300)
+  @Throttle(10, 60)
+  @UseFilters(HttpExceptionFilter)
   @Post('permission-attendance')
   async createPermissionAttendance(
     @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
@@ -91,5 +96,79 @@ export class EmployeeController {
     @Body() employeeChangePasswordDto: ChangePasswordEmployeeDto,
   ) {
     return this.employeeService.changePassword(employeeChangePasswordDto);
+  }
+  @UseGuards(ThrottlerGuard)
+  @Throttle(10, 60)
+  @UseFilters(HttpExceptionFilter)
+  @Post('clockin')
+  async createClockIn(
+    @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
+    @Body() createClockInDto: CreateClockInDto,
+  ): Promise<any> {
+    // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
+    if (!authHeader) {
+      throw new NotFoundException('Token not found');
+    }
+
+    const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization
+
+    if (!token_auth) {
+      throw new UnauthorizedException('Bearer token is missing');
+    }
+
+    // Panggil service untuk melakukan operasi createClockIn dengan DTO dan token
+    return this.employeeService.createClockIn(
+      token_auth, // Teruskan token ke service
+      createClockInDto,
+    );
+  }
+
+  @UseGuards(ThrottlerGuard)
+  @Throttle(10, 60)
+  @UseFilters(HttpExceptionFilter)
+  @Post('clockout')
+  async createClockOut(
+    @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
+    @Body() createClockOutDto: CreateClockOutDto,
+  ): Promise<any> {
+    // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
+    if (!authHeader) {
+      throw new NotFoundException('Token not found');
+    }
+
+    const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization
+
+    if (!token_auth) {
+      throw new UnauthorizedException('Bearer token is missing');
+    }
+
+    // Panggil service untuk melakukan operasi createClockIn dengan DTO dan token
+    return this.employeeService.createClockOut(
+      token_auth, // Teruskan token ke service
+      createClockOutDto,
+    );
+  }
+
+  @UseGuards(ThrottlerGuard)
+  @Throttle(10, 60)
+  @UseFilters(HttpExceptionFilter)
+  @Post('debt/request')
+  async createDebtRequest(
+    @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
+    @Body() debtRequestEmployeeDto: DebtRequestEmployeeDto,
+  ): Promise<any> {
+    // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
+    if (!authHeader) {
+      throw new NotFoundException('Token not found');
+    }
+
+    const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization
+
+    if (!token_auth) {
+      throw new UnauthorizedException('Bearer token is missing');
+    }
+
+    // Panggil service untuk membuat permintaan hutang dengan DTO dan token
+    return this.employeeService.debtRequest(token_auth, debtRequestEmployeeDto);
   }
 }
