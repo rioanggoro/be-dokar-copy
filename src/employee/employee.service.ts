@@ -5,8 +5,6 @@ import {
   NotFoundException,
   UseFilters,
   UnauthorizedException,
-  HttpException,
-  HttpStatus,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -185,12 +183,18 @@ export class EmployeeService {
       employeePermissionAttendanceDto;
 
     try {
-      let decoded;
+      let decodedToken;
       try {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        decoded = this.jwtService.verify(token_auth);
+        decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
       } catch (error) {
-        throw new UnauthorizedException('Invalid token');
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
       }
 
       // Cari employee berdasarkan id
@@ -199,11 +203,7 @@ export class EmployeeService {
       });
 
       if (!employee) {
-        throw new NotFoundException({
-          statusCode: HttpStatus.NOT_FOUND,
-          status: 'Error',
-          message: 'Employee not found',
-        });
+        throw new NotFoundException('Employee not found');
       }
 
       // Simpan permission attendance
@@ -226,13 +226,8 @@ export class EmployeeService {
       ) {
         throw error;
       }
-      throw new HttpException(
-        {
-          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-          status: 'Error',
-          message: 'Error sent permission attendance',
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR,
+      throw new InternalServerErrorException(
+        'Error sent permission attendance',
       );
     }
   }
@@ -428,21 +423,27 @@ export class EmployeeService {
       createClockInDto;
 
     try {
-      // Verifikasi token
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const token = this.jwtService.verify(token_auth);
-
-      if (!token) {
-        throw new UnauthorizedException('Missing token');
+      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
+      let decodedToken;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
       }
 
-      // Validasi token terakhir login
       const validToken = await this.employeeRepository.findOne({
         where: { token_auth },
       });
 
       if (!validToken) {
-        throw new UnauthorizedException('Invalid token');
+        throw new NotFoundException('Token not found');
       }
 
       // Cari employee berdasarkan id_employee
@@ -471,11 +472,9 @@ export class EmployeeService {
 
       // Periksa apakah jarak dalam radius yang diizinkan (misal radius dalam meter)
       if (distance > company.set_radius) {
-        throw new BadRequestException({
-          statusCode: HttpStatus.BAD_REQUEST,
-          status: 'Error',
-          message: `Clock-in location is outside the allowed radius (${company.set_radius} meters)`,
-        });
+        throw new BadRequestException(
+          `Clock-in location is outside the allowed radius (${company.set_radius} meters)`,
+        );
       }
 
       // Simpan clock-in jika jarak dalam radius
@@ -503,14 +502,7 @@ export class EmployeeService {
       ) {
         throw error;
       }
-      throw new HttpException(
-        {
-          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-          status: 'Error',
-          message: 'Error clock in',
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+      throw new InternalServerErrorException('Error clock in');
     }
   }
 
@@ -523,24 +515,33 @@ export class EmployeeService {
       createClockOutDto;
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const token = this.jwtService.verify(token_auth);
-
-      if (!token) {
-        throw new UnauthorizedException('Missing token');
+      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
+      let decodedToken;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
       }
-      // Validasi token terakhir login
+
       const validToken = await this.employeeRepository.findOne({
         where: { token_auth },
       });
+
       if (!validToken) {
-        throw new UnauthorizedException('Invalid token');
+        throw new NotFoundException('Token not found');
       }
 
       // Cari employee berdasarkan id_employee
       const employee = await this.employeeRepository.findOne({
         where: { id_employee },
-        relations: ['company'], // Pastikan mengambil data company juga
+        relations: ['company'],
       });
 
       if (!employee) {
@@ -563,11 +564,9 @@ export class EmployeeService {
 
       // Periksa apakah jarak dalam radius yang diizinkan (misal radius dalam meter)
       if (distance > company.set_radius) {
-        throw new BadRequestException({
-          statusCode: HttpStatus.BAD_REQUEST,
-          status: 'Error',
-          message: `Clock-out location is outside the allowed radius (${company.set_radius} meters)`,
-        });
+        throw new BadRequestException(
+          `Clock-out location is outside the allowed radius (${company.set_radius} meters)`,
+        );
       }
 
       // Simpan clock-out jika jarak dalam radius
@@ -581,7 +580,6 @@ export class EmployeeService {
       clockOut.employee = employee;
 
       await this.clockOutRepository.save(clockOut);
-      console.log('Clock-out record saved successfully');
 
       return {
         statusCode: 201,
@@ -596,14 +594,7 @@ export class EmployeeService {
       ) {
         throw error;
       }
-      throw new HttpException(
-        {
-          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-          status: 'Error',
-          message: 'Error clock out',
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+      throw new InternalServerErrorException('Error clock out');
     }
   }
 
@@ -621,7 +612,7 @@ export class EmployeeService {
       borrowing_cost,
       admin_fee,
       grand_total_request,
-      remaining_saldo_debt, // Terima remaining_saldo_debt dari client
+      remaining_saldo_debt,
     } = debtRequestEmployeeDto;
 
     try {
@@ -629,13 +620,14 @@ export class EmployeeService {
       let decodedToken;
       try {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        decodedToken = this.jwtService.verify(token_auth); // Verifikasi token JWT
+        decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
       } catch (error) {
         if (error.name === 'JsonWebTokenError') {
-          // Token salah secara format atau sintaks
-          throw new UnauthorizedException('Token does not match');
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
         } else {
-          throw new UnauthorizedException('Invalid token');
+          throw new UnauthorizedException('Token verification failed');
         }
       }
 

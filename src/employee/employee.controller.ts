@@ -95,7 +95,8 @@ export class EmployeeController {
     return this.employeeService.changePassword(employeeChangePasswordDto);
   }
   @UseGuards(ThrottlerGuard)
-  @Throttle(50, 300)
+  @Throttle(10, 60)
+  @UseFilters(HttpExceptionFilter)
   @Post('clockin')
   async createClockIn(
     @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
@@ -120,7 +121,8 @@ export class EmployeeController {
   }
 
   @UseGuards(ThrottlerGuard)
-  @Throttle(50, 300)
+  @Throttle(10, 60)
+  @UseFilters(HttpExceptionFilter)
   @Post('clockout')
   async createClockOut(
     @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
@@ -164,9 +166,6 @@ export class EmployeeController {
     }
 
     // Panggil service untuk membuat permintaan hutang dengan DTO dan token
-    return this.employeeService.debtRequest(
-      token_auth, // Teruskan token ke service
-      debtRequestEmployeeDto, // Teruskan DTO ke service
-    );
+    return this.employeeService.debtRequest(token_auth, debtRequestEmployeeDto);
   }
 }
