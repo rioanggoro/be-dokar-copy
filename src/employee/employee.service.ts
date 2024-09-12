@@ -625,18 +625,26 @@ export class EmployeeService {
     } = debtRequestEmployeeDto;
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const token = this.jwtService.verify(token_auth);
-
-      if (!token) {
-        throw new UnauthorizedException('Missing token');
+      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
+      let decodedToken;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decodedToken = this.jwtService.verify(token_auth); // Verifikasi token JWT
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          // Token salah secara format atau sintaks
+          throw new UnauthorizedException('Token does not match');
+        } else {
+          throw new UnauthorizedException('Invalid token');
+        }
       }
-      // Validasi token terakhir login
+
       const validToken = await this.employeeRepository.findOne({
         where: { token_auth },
       });
+
       if (!validToken) {
-        throw new UnauthorizedException('Invalid token');
+        throw new NotFoundException('Token not found');
       }
 
       // Cari employee berdasarkan id_employee
@@ -693,14 +701,7 @@ export class EmployeeService {
       }
 
       // Tangani error internal
-      throw new HttpException(
-        {
-          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-          status: 'Error',
-          message: 'Error creating debt request',
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+      throw new InternalServerErrorException('Error creating debt request');
     }
   }
 }
