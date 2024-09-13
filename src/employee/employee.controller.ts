@@ -36,7 +36,7 @@ export class EmployeeController {
   ): Promise<any> {
     // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
     if (!authHeader) {
-      throw new NotFoundException('Token not found');
+      throw new NotFoundException('Missing Token');
     }
 
     const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization
@@ -107,7 +107,7 @@ export class EmployeeController {
   ): Promise<any> {
     // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
     if (!authHeader) {
-      throw new NotFoundException('Token not found');
+      throw new NotFoundException('Missing Token');
     }
 
     const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization
@@ -133,7 +133,7 @@ export class EmployeeController {
   ): Promise<any> {
     // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
     if (!authHeader) {
-      throw new NotFoundException('Token not found');
+      throw new NotFoundException('Missing Token');
     }
 
     const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization
@@ -159,7 +159,7 @@ export class EmployeeController {
   ): Promise<any> {
     // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
     if (!authHeader) {
-      throw new NotFoundException('Token not found');
+      throw new NotFoundException('Missing Token');
     }
 
     const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization

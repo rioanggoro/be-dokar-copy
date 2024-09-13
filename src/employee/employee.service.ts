@@ -186,6 +186,7 @@ export class EmployeeService {
       employeePermissionAttendanceDto;
 
     try {
+      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
       let decodedToken;
       try {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -198,6 +199,14 @@ export class EmployeeService {
         } else {
           throw new UnauthorizedException('Token verification failed');
         }
+      }
+
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
+        throw new NotFoundException('Token not found');
       }
 
       // Cari employee berdasarkan id
@@ -251,7 +260,6 @@ export class EmployeeService {
 
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const expiresAt = Date.now() + 2 * 60 * 1000; // OTP valid selama 2 menit
-      
 
       // Simpan OTP dan waktu kedaluwarsa dalam memori
       this.otps[email] = { otp, expiresAt, isUsed: false };
@@ -517,8 +525,8 @@ export class EmployeeService {
     const { id_employee, address, latitude, longitude, photo, date, time } =
       createClockOutDto;
 
-    try {      
-       let decodedToken;
+    try {
+      let decodedToken;
       try {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
