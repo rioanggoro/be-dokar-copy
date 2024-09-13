@@ -18,6 +18,9 @@ export class PermissionAttendance {
   @Column({ type: 'varchar', length: 20 })
   proof_of_attendance: string;
 
+  @Column({ type: 'varchar', length: 20 })
+  status: string;
+
   @ManyToOne(() => Employee, (employee) => employee.permissionAttendances)
   @JoinColumn({ name: 'employee_id' })
   employee: Employee;

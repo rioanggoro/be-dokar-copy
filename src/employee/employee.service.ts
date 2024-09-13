@@ -223,6 +223,7 @@ export class EmployeeService {
       permissionAttendance.description = description;
       permissionAttendance.proof_of_attendance = proof_of_attendance;
       permissionAttendance.employee = employee;
+      permissionAttendance.status = 'Request';
 
       await this.permissionAttendanceRepository.save(permissionAttendance);
       return {
@@ -681,7 +682,7 @@ export class EmployeeService {
       debtRequest.borrowing_cost = borrowing_cost;
       debtRequest.admin_fee = admin_fee;
       debtRequest.grand_total_request = grand_total_request;
-      debtRequest.status = 'Pending'; // Set status default menjadi "Pending"
+      debtRequest.status = 'Request'; // Set status "request,berhasil,ditolak"
 
       // Simpan DebtRequest ke dalam database tanpa menyimpan remaining_saldo_debt
       await this.debtRequestRepository.save(debtRequest);
