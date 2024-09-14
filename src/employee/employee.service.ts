@@ -182,7 +182,7 @@ export class EmployeeService {
     token_auth: string, // Terima token_auth dari controller
     employeePermissionAttendanceDto: PermissionAttendanceEmployeeDto,
   ): Promise<any> {
-    const { id_employee, description, proof_of_attendance } =
+    const { id_employee, description, proof_of_attendance, department } =
       employeePermissionAttendanceDto;
 
     try {
@@ -221,6 +221,7 @@ export class EmployeeService {
       // Simpan permission attendance
       const permissionAttendance = new PermissionAttendance();
       permissionAttendance.description = description;
+      permissionAttendance.department = department;
       permissionAttendance.proof_of_attendance = proof_of_attendance;
       permissionAttendance.employee = employee;
       permissionAttendance.status = 'Request';
@@ -624,6 +625,7 @@ export class EmployeeService {
       admin_fee,
       grand_total_request,
       remaining_saldo_debt,
+      department,
     } = debtRequestEmployeeDto;
 
     try {
@@ -682,6 +684,7 @@ export class EmployeeService {
       debtRequest.borrowing_cost = borrowing_cost;
       debtRequest.admin_fee = admin_fee;
       debtRequest.grand_total_request = grand_total_request;
+      debtRequest.department = department;
       debtRequest.status = 'Request'; // Set status "request,berhasil,ditolak"
 
       // Simpan DebtRequest ke dalam database tanpa menyimpan remaining_saldo_debt

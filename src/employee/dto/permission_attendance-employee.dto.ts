@@ -12,4 +12,8 @@ export class PermissionAttendanceEmployeeDto {
   @IsString()
   @IsNotEmpty()
   proof_of_attendance: string;
+
+  @IsString()
+  @IsNotEmpty()
+  department: string;
 }

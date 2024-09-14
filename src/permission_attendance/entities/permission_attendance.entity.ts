@@ -18,6 +18,9 @@ export class PermissionAttendance {
   @Column({ type: 'varchar', length: 20 })
   proof_of_attendance: string;
 
+  @Column({ type: 'varchar', length: 50 })
+  department: string;
+
   @Column({ type: 'varchar', length: 20 })
   status: string;
 

@@ -54,4 +54,7 @@ export class DebtRequest {
 
   @Column({ type: 'double precision', precision: 10, scale: 2 })
   borrowing_cost: number;
+
+  @Column({ type: 'varchar', length: 50 })
+  department: string;
 }
