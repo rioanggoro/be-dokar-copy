@@ -23,12 +23,6 @@ export class Employee {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id_employee: number;
 
-  // Relasi ke PersonalInformation
-  // @OneToOne(
-  //   () => PersonalInformation,
-  //   (personalInformation) => personalInformation.employee,
-  //   { cascade: true },
-  // )
   @OneToOne(() => PersonalInformation, { cascade: true })
   @JoinColumn({ name: 'personal_information_id' })
   personalInformation: PersonalInformation;
