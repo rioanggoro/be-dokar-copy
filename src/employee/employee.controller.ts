@@ -22,6 +22,7 @@ import { CreateClockOutDto } from './dto/clock_out-employee.dto';
 import { DebtRequestEmployeeDto } from './dto/debt_request-employee.dto';
 import { GetGeneralInformationEmployeeDto } from './dto/get_general_information-employee.dto';
 import { EditGeneralInformationEmployeeDto } from './dto/edit_general_information-employee.dto';
+import { GetPersonalInformationEmployeeDto } from './dto/get_personal_information.dto';
 
 @Controller('employee')
 export class EmployeeController {
@@ -224,6 +225,33 @@ export class EmployeeController {
     return this.employeeService.editGeneralInformation(
       token_auth,
       editGeneralInformation,
+    );
+  }
+
+  @UseGuards(ThrottlerGuard)
+  @Throttle(10, 60)
+  @UseFilters(HttpExceptionFilter)
+  @Post('personal-information/get')
+  async getPersonalInformation(
+    @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
+    @Body()
+    getPersonalInformationEmployeeDto: GetPersonalInformationEmployeeDto,
+  ): Promise<any> {
+    // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
+    if (!authHeader) {
+      throw new NotFoundException('Missing Token');
+    }
+
+    const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization
+
+    if (!token_auth) {
+      throw new UnauthorizedException('Bearer token is missing');
+    }
+
+    // Panggil service untuk mengambil general information dengan DTO dan token
+    return this.employeeService.getPersonalInformation(
+      token_auth,
+      getPersonalInformationEmployeeDto,
     );
   }
 }

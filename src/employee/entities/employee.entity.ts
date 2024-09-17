@@ -16,14 +16,21 @@ import { PermissionAttendance } from 'src/permission_attendance/entities/permiss
 import { ClockIn } from 'src/clockin/entities/clockin.entity';
 import { ClockOut } from 'src/clockout/entities/clockout.entity';
 import { DebtRequest } from 'src/debt_request/entities/debt_request.entity';
+import { PersonalInformation } from 'src/personal_information/entities/personal_information.entity';
 
 @Entity('employee')
 export class Employee {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id_employee: number;
 
-  @Column({ type: 'integer' })
-  personal_information_id: number;
+  // Relasi ke PersonalInformation
+  @OneToOne(
+    () => PersonalInformation,
+    (personalInformation) => personalInformation.employee,
+    { cascade: true },
+  )
+  @JoinColumn({ name: 'personal_information_id' })
+  personalInformation: PersonalInformation;
 
   // 1 employee have 1 employee general information
   @OneToOne(() => GeneralInformation, { cascade: true })

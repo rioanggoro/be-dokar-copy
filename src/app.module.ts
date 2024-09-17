@@ -12,6 +12,7 @@ import { PermissionAttendanceModule } from './permission_attendance/permission_a
 import { ClockinModule } from './clockin/clockin.module';
 import { ClockoutModule } from './clockout/clockout.module';
 import { DebtRequestModule } from './debt_request/debt_request.module';
+import { PersonalInformationModule } from './personal_information/personal_information.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { DebtRequestModule } from './debt_request/debt_request.module';
     ClockinModule,
     ClockoutModule,
     DebtRequestModule,
+    PersonalInformationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
