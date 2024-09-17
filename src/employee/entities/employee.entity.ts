@@ -24,11 +24,12 @@ export class Employee {
   id_employee: number;
 
   // Relasi ke PersonalInformation
-  @OneToOne(
-    () => PersonalInformation,
-    (personalInformation) => personalInformation.employee,
-    { cascade: true },
-  )
+  // @OneToOne(
+  //   () => PersonalInformation,
+  //   (personalInformation) => personalInformation.employee,
+  //   { cascade: true },
+  // )
+  @OneToOne(() => PersonalInformation, { cascade: true })
   @JoinColumn({ name: 'personal_information_id' })
   personalInformation: PersonalInformation;
 
