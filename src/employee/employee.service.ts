@@ -12,7 +12,7 @@ import { Employee } from './entities/employee.entity';
 import { Company } from 'src/company/entities/company.entity';
 import { JwtService } from '@nestjs/jwt';
 import { HttpExceptionFilter } from 'src/shared/filters/exception.filter';
-import { GeneralInforamtion } from 'src/general_inforamtion/entities/general_inforamtion.entity';
+import { GeneralInformation } from 'src/general_inforamtion/entities/general_inforamtion.entity';
 import { comparePassword, hashPassword } from 'src/shared/utils/hash.util';
 import { RegisterEmployeeDto } from './dto/register-employee.dto';
 import { LoginEmployeeDto } from './dto/login-employee.dto';
@@ -29,6 +29,7 @@ import { CreateClockOutDto } from './dto/clock_out-employee.dto';
 import { DebtRequestEmployeeDto } from './dto/debt_request-employee.dto';
 import { DebtRequest } from 'src/debt_request/entities/debt_request.entity';
 import { calculateDistance } from 'src/shared/utils/distance.util';
+import { GetGeneralInformationEmployeeDto } from './dto/get_general_information-employee.dto';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -40,8 +41,8 @@ export class EmployeeService {
   constructor(
     @InjectRepository(Employee)
     private employeeRepository: Repository<Employee>,
-    @InjectRepository(GeneralInforamtion)
-    private generalInformationRepository: Repository<GeneralInforamtion>,
+    @InjectRepository(GeneralInformation)
+    private generalInformationRepository: Repository<GeneralInformation>,
     @InjectRepository(Company)
     private companyRepository: Repository<Company>,
     @InjectRepository(PermissionAttendance)
@@ -52,6 +53,8 @@ export class EmployeeService {
     private clockOutRepository: Repository<ClockOut>,
     @InjectRepository(DebtRequest)
     private debtRequestRepository: Repository<DebtRequest>,
+    @InjectRepository(GeneralInformation)
+    private getGeneralInformationRepository: Repository<GeneralInformation>,
 
     private jwtService: JwtService, // Injeksi JwtService
   ) {}
@@ -708,6 +711,72 @@ export class EmployeeService {
 
       // Tangani error internal
       throw new InternalServerErrorException('Error creating debt request');
+    }
+  }
+
+  async getGeneralInformation(
+    token_auth: string,
+    getGeneralInformationEmployeeDto: GetGeneralInformationEmployeeDto,
+  ): Promise<any> {
+    const { id_employee } = getGeneralInformationEmployeeDto;
+
+    try {
+      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
+      let decodedToken;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decodedToken = this.jwtService.verify(token_auth); // Verifikasi JWT token
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
+      }
+
+      // Cari employee berdasarkan id_employee
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+        relations: ['generalInformation'], // Pastikan relasi general information dimuat
+      });
+
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      // Ambil informasi umum (general information) dari employee yang ditemukan
+      const generalInfo = employee.generalInformation;
+
+      if (!generalInfo) {
+        throw new NotFoundException(
+          'General information for this employee not found',
+        );
+      }
+
+      // Kembalikan informasi umum dari employee
+      return {
+        statusCode: 200,
+        status: 'success',
+        message: 'Successfully retrieved general information',
+        general_information: {
+          employee_name: employee.employee_name,
+          place_of_birth: generalInfo.user_place_of_birth,
+          date_of_birth: generalInfo.user_date_of_birth,
+          religion: generalInfo.user_religion,
+          user_gender: generalInfo.user_gender,
+          phone: generalInfo.phone,
+          user_addresses: generalInfo.user_addresses_idcard,
+          address_domicile: generalInfo.user_address_domicile,
+          last_education: generalInfo.last_education,
+        },
+      };
+    } catch (error) {
+      // Tangani error internal
+      throw new InternalServerErrorException(
+        'Error retrieving general information',
+      );
     }
   }
 }
