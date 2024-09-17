@@ -803,7 +803,7 @@ export class EmployeeService {
     editGeneralInformationEmployeeDto: EditGeneralInformationEmployeeDto,
   ): Promise<any> {
     const {
-      id_employee,
+      employee_name, // Ini dari entitas Employee
       place_of_birth,
       date_of_birth,
       religion,
@@ -840,16 +840,18 @@ export class EmployeeService {
 
       // Cari employee berdasarkan id_employee
       const employee = await this.employeeRepository.findOne({
-        where: { id_employee },
+        where: { id_employee: validToken.id_employee },
         relations: ['generalInformation'], // Pastikan kita memuat relasi general information
       });
 
       if (!employee) {
-        console.error('Employee not found for id_employee:', id_employee);
         throw new NotFoundException('Employee not found');
       }
 
-      // Cari GeneralInformation yang terhubung dengan employee
+      // Perbarui employee_name di entitas Employee
+      employee.employee_name = employee_name;
+
+      // Perbarui informasi di GeneralInformation
       const generalInformation = employee.generalInformation;
 
       if (!generalInformation) {
@@ -858,7 +860,6 @@ export class EmployeeService {
         );
       }
 
-      // Perbarui informasi
       generalInformation.user_religion = religion;
       generalInformation.user_place_of_birth = place_of_birth;
       generalInformation.user_date_of_birth = new Date(date_of_birth);
@@ -869,13 +870,14 @@ export class EmployeeService {
       generalInformation.last_education = last_education;
 
       // Simpan perubahan ke database
-      await this.generalInformationRepository.save(generalInformation);
+      await this.employeeRepository.save(employee); // Simpan employee_name
+      await this.generalInformationRepository.save(generalInformation); // Simpan generalInformation
 
       // Kembalikan response sukses
       return {
         statusCode: 201,
         status: 'success',
-        message: 'Successfully edited general information',
+        message: 'Successfully edit general information',
       };
     } catch (error) {
       // Tangani error khusus
@@ -887,9 +889,7 @@ export class EmployeeService {
       }
 
       // Tangani error internal
-      throw new InternalServerErrorException(
-        'Error editing general information',
-      );
+      throw new InternalServerErrorException('Error edit general information ');
     }
   }
 }
