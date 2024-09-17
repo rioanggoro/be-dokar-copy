@@ -30,6 +30,7 @@ import { DebtRequestEmployeeDto } from './dto/debt_request-employee.dto';
 import { DebtRequest } from 'src/debt_request/entities/debt_request.entity';
 import { calculateDistance } from 'src/shared/utils/distance.util';
 import { GetGeneralInformationEmployeeDto } from './dto/get_general_information-employee.dto';
+import { EditGeneralInformationEmployeeDto } from './dto/edit_general_information-employee.dto';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -54,7 +55,7 @@ export class EmployeeService {
     @InjectRepository(DebtRequest)
     private debtRequestRepository: Repository<DebtRequest>,
     @InjectRepository(GeneralInformation)
-    private getGeneralInformationRepository: Repository<GeneralInformation>,
+    private editGeneralInformationRepository: Repository<GeneralInformation>,
 
     private jwtService: JwtService, // Injeksi JwtService
   ) {}
@@ -794,6 +795,101 @@ export class EmployeeService {
 
       // Tangani error internal lainnya
       throw new InternalServerErrorException('Error get general information');
+    }
+  }
+
+  async editGeneralInformation(
+    token_auth: string,
+    editGeneralInformationEmployeeDto: EditGeneralInformationEmployeeDto,
+  ): Promise<any> {
+    const {
+      id_employee,
+      place_of_birth,
+      date_of_birth,
+      religion,
+      user_gender,
+      phone,
+      user_addresses,
+      address_domicile,
+      last_education,
+    } = editGeneralInformationEmployeeDto;
+
+    try {
+      // Verifikasi token
+      let decodedToken;
+      try {
+        decodedToken = this.jwtService.verify(token_auth);
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
+      }
+
+      // Verifikasi apakah token valid di database
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
+        throw new NotFoundException('Token not found');
+      }
+
+      // Cari employee berdasarkan id_employee
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+        relations: ['generalInformation'], // Pastikan kita memuat relasi general information
+      });
+
+      if (!employee) {
+        console.error('Employee not found for id_employee:', id_employee);
+        throw new NotFoundException('Employee not found');
+      }
+
+      // Cari GeneralInformation yang terhubung dengan employee
+      const generalInformation = employee.generalInformation;
+
+      if (!generalInformation) {
+        throw new NotFoundException(
+          'General information not found for this employee',
+        );
+      }
+
+      // Perbarui informasi
+      generalInformation.user_religion = religion;
+      generalInformation.user_place_of_birth = place_of_birth;
+      generalInformation.user_date_of_birth = new Date(date_of_birth);
+      generalInformation.user_gender = user_gender;
+      generalInformation.phone = phone;
+      generalInformation.user_addresses_idcard = user_addresses;
+      generalInformation.user_address_domicile = address_domicile;
+      generalInformation.last_education = last_education;
+
+      // Simpan perubahan ke database
+      await this.generalInformationRepository.save(generalInformation);
+
+      // Kembalikan response sukses
+      return {
+        statusCode: 201,
+        status: 'success',
+        message: 'Successfully edited general information',
+      };
+    } catch (error) {
+      // Tangani error khusus
+      if (
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+
+      // Tangani error internal
+      throw new InternalServerErrorException(
+        'Error editing general information',
+      );
     }
   }
 }
