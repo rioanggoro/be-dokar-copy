@@ -736,12 +736,22 @@ export class EmployeeService {
         }
       }
 
+      // Verifikasi apakah token valid di database
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
+        throw new NotFoundException('Token not found');
+      }
+
       // Cari employee berdasarkan id_employee
       const employee = await this.employeeRepository.findOne({
         where: { id_employee },
         relations: ['generalInformation'], // Pastikan relasi general information dimuat
       });
 
+      // Jika employee tidak ditemukan, lemparkan NotFoundException
       if (!employee) {
         throw new NotFoundException('Employee not found');
       }
@@ -749,9 +759,10 @@ export class EmployeeService {
       // Ambil informasi umum (general information) dari employee yang ditemukan
       const generalInfo = employee.generalInformation;
 
+      // Jika generalInformation tidak ditemukan
       if (!generalInfo) {
         throw new NotFoundException(
-          'General information for this employee not found',
+          'General information not found for this employee',
         );
       }
 
@@ -759,7 +770,7 @@ export class EmployeeService {
       return {
         statusCode: 200,
         status: 'success',
-        message: 'Successfully retrieved general information',
+        message: 'Successfully get general information',
         general_information: {
           employee_name: employee.employee_name,
           place_of_birth: generalInfo.user_place_of_birth,
@@ -773,10 +784,16 @@ export class EmployeeService {
         },
       };
     } catch (error) {
-      // Tangani error internal
-      throw new InternalServerErrorException(
-        'Error retrieving general information',
-      );
+      // Jika error yang dilemparkan adalah NotFoundException atau UnauthorizedException, lempar kembali
+      if (
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+
+      // Tangani error internal lainnya
+      throw new InternalServerErrorException('Error get general information');
     }
   }
 }
