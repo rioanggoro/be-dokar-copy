@@ -57,7 +57,7 @@ export class EmployeeService {
     private clockOutRepository: Repository<ClockOut>,
     @InjectRepository(DebtRequest)
     private debtRequestRepository: Repository<DebtRequest>,
-    @InjectRepository(GeneralInformation)
+    @InjectRepository(PersonalInformation)
     private personalInformationRepository: Repository<PersonalInformation>,
 
     private jwtService: JwtService, // Injeksi JwtService
@@ -1023,18 +1023,18 @@ export class EmployeeService {
       console.log('Data Saved. Now checking DB.');
 
       // Periksa apakah data benar-benar tersimpan
-      // const updatedPersonalInformation =
-      //   await this.personalInformationRepository.findOne({
-      //     where: {
-      //       id_personal_information:
-      //         personalInformation.id_personal_information,
-      //     }, // Gunakan id_personal_information untuk mengecek update
-      //   });
+      const updatedPersonalInformation =
+        await this.personalInformationRepository.findOne({
+          where: {
+            id_personal_information:
+              personalInformation.id_personal_information,
+          }, // Gunakan id_personal_information untuk mengecek update
+        });
 
-      // console.log(
-      //   'Updated Personal Information from DB:',
-      //   updatedPersonalInformation,
-      // ); // Logging setelah data disimpan
+      console.log(
+        'Updated Personal Information from DB:',
+        updatedPersonalInformation,
+      ); // Logging setelah data disimpan
 
       // Kembalikan response sukses
       return {

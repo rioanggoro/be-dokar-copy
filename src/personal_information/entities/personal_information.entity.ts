@@ -24,8 +24,8 @@ export class PersonalInformation {
   @Column({ type: 'character varying', length: 100 })
   bank_name: string;
 
-  @Column({ type: 'integer' })
-  account_number: number;
+  @Column({ type: 'character varying', length: 30 })
+  account_number: string;
 
   @Column({ type: 'character varying', length: 100 })
   account_name: string;
