@@ -940,7 +940,7 @@ export class EmployeeService {
         personal_information: {
           id_card: personalInfo.id_card,
           tax_identification_number: personalInfo.tax_identification_number,
-          tax_type: personalInfo.tax_type_id,
+          tax_type: personalInfo.tax_type,
           tax_deduction: personalInfo.tax_deduction,
           bank_name: personalInfo.bank_name,
           account_number: personalInfo.account_number,

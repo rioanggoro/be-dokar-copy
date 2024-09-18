@@ -6,14 +6,14 @@ export class PersonalInformation {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id_personal_information: number;
 
-  @Column({ type: 'integer' })
-  tax_identification_number: number;
+  @Column({ type: 'character varying', length: 17 })
+  tax_identification_number: string;
 
-  @Column({ type: 'character varying', length: 20 })
+  @Column({ type: 'character varying', length: 17 })
   id_card: string;
 
-  @Column({ type: 'integer' })
-  tax_type_id: number;
+  @Column({ type: 'character varying', length: 100 })
+  tax_type: string;
 
   @Column({ type: 'boolean' })
   tax_deduction: boolean;

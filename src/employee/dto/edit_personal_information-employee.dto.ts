@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, MaxLength } from 'class-validator';
 
 export class EditPersonalInformationEmployeeDto {
   @IsNumber()
@@ -7,9 +7,11 @@ export class EditPersonalInformationEmployeeDto {
 
   @IsString()
   @IsNotEmpty()
+  @MaxLength(17)
   id_card: string;
 
-  @IsNumber()
+  @IsString()
   @IsNotEmpty()
-  tax_identification_number: number;
+  @MaxLength(17)
+  tax_identification_number: string;
 }
