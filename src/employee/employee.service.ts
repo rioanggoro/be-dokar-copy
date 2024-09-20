@@ -31,6 +31,9 @@ import { DebtRequest } from 'src/debt_request/entities/debt_request.entity';
 import { calculateDistance } from 'src/shared/utils/distance.util';
 import { GetGeneralInformationEmployeeDto } from './dto/get_general_information-employee.dto';
 import { EditGeneralInformationEmployeeDto } from './dto/edit_general_information-employee.dto';
+import { GetPersonalInformationEmployeeDto } from './dto/get_personal_information.dto';
+import { EditPersonalInformationEmployeeDto } from './dto/edit_personal_information-employee.dto';
+import { PersonalInformation } from 'src/personal_information/entities/personal_information.entity';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -54,8 +57,8 @@ export class EmployeeService {
     private clockOutRepository: Repository<ClockOut>,
     @InjectRepository(DebtRequest)
     private debtRequestRepository: Repository<DebtRequest>,
-    @InjectRepository(GeneralInformation)
-    private editGeneralInformationRepository: Repository<GeneralInformation>,
+    @InjectRepository(PersonalInformation)
+    private personalInformationRepository: Repository<PersonalInformation>,
 
     private jwtService: JwtService, // Injeksi JwtService
   ) {}
@@ -81,7 +84,13 @@ export class EmployeeService {
     });
 
     if (!employee) {
-      throw new NotFoundException('Employee not found for this company'); // Tetap di service
+      throw new NotFoundException('Employee not found for this company');
+    }
+    // Pastikan bahwa email tidak bisa diubah
+    if (employee.email !== email) {
+      throw new BadRequestException(
+        'Account is already registered, please use another account',
+      );
     }
 
     // Cek apakah email sudah terdaftar untuk employee ini
@@ -302,7 +311,6 @@ export class EmployeeService {
         message: 'Successfully sent OTP to email',
       };
     } catch (error) {
-      console.error('Error detail:', error);
       if (
         error instanceof BadRequestException ||
         error instanceof NotFoundException ||
@@ -354,7 +362,6 @@ export class EmployeeService {
 
       // Ubah OTP yang diterima menjadi string
       if (record.otp !== otp.toString()) {
-        console.log('Invalid OTP');
         throw new UnauthorizedException('Invalid OTP');
       }
 
@@ -402,7 +409,7 @@ export class EmployeeService {
       );
       if (isOldPasswordValid) {
         throw new BadRequestException(
-          'New password cannot be the same as the old password',
+          'Account is already registered, please use another account',
         );
       }
 
@@ -427,7 +434,6 @@ export class EmployeeService {
       }
 
       // Tangani error yang tidak terduga dan log error internal untuk debugging
-      console.error('Error changing password:', error);
       throw new InternalServerErrorException('Error changing password');
     }
   }
@@ -662,7 +668,6 @@ export class EmployeeService {
       });
 
       if (!employee) {
-        console.error('Employee not found for id_employee:', id_employee);
         throw new NotFoundException('Employee not found');
       }
 
@@ -760,16 +765,9 @@ export class EmployeeService {
       // Ambil informasi umum (general information) dari employee yang ditemukan
       const generalInfo = employee.generalInformation;
 
-      // Jika generalInformation tidak ditemukan
-      if (!generalInfo) {
-        throw new NotFoundException(
-          'General information not found for this employee',
-        );
-      }
-
       // Kembalikan informasi umum dari employee
       return {
-        statusCode: 200,
+        statusCode: 201,
         status: 'success',
         message: 'Successfully get general information',
         general_information: {
@@ -803,7 +801,7 @@ export class EmployeeService {
     editGeneralInformationEmployeeDto: EditGeneralInformationEmployeeDto,
   ): Promise<any> {
     const {
-      employee_name, // Ini dari entitas Employee
+      employee_name,
       place_of_birth,
       date_of_birth,
       religion,
@@ -818,6 +816,7 @@ export class EmployeeService {
       // Verifikasi token
       let decodedToken;
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         decodedToken = this.jwtService.verify(token_auth);
       } catch (error) {
         if (error.name === 'JsonWebTokenError') {
@@ -854,12 +853,13 @@ export class EmployeeService {
       // Perbarui informasi di GeneralInformation
       const generalInformation = employee.generalInformation;
 
-      if (!generalInformation) {
+       if (!generalInformation) {
         throw new NotFoundException(
           'General information not found for this employee',
         );
       }
 
+      // Perbarui informasi
       generalInformation.user_religion = religion;
       generalInformation.user_place_of_birth = place_of_birth;
       generalInformation.user_date_of_birth = new Date(date_of_birth);
@@ -889,7 +889,159 @@ export class EmployeeService {
       }
 
       // Tangani error internal
-      throw new InternalServerErrorException('Error edit general information ');
+      throw new InternalServerErrorException('Error editing general information ');
+    }
+  }
+
+  async getPersonalInformation(
+    token_auth: string,
+    getPersonalInformationEmployeeDto: GetPersonalInformationEmployeeDto,
+  ): Promise<any> {
+    const { id_employee } = getPersonalInformationEmployeeDto;
+
+    try {
+      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
+      let decodedToken;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decodedToken = this.jwtService.verify(token_auth); // Verifikasi JWT token
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
+      }
+
+      // Verifikasi apakah token valid di database
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
+        throw new NotFoundException('Token not found');
+      }
+
+      // Cari employee berdasarkan id_employee
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+        relations: ['personalInformation'],
+      });
+
+      // Jika employee tidak ditemukan, lemparkan NotFoundException
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      // Ambil informasi umum (general information) dari employee yang ditemukan
+      const personalInfo = employee.personalInformation;
+
+      // Kembalikan informasi umum dari employee
+      return {
+        statusCode: 201,
+        status: 'success',
+        message: 'Successfully get personal information',
+        personal_information: {
+          id_card: personalInfo.id_card,
+          tax_identification_number: personalInfo.tax_identification_number,
+          tax_type: personalInfo.tax_type,
+          tax_deduction: personalInfo.tax_deduction,
+          bank_name: personalInfo.bank_name,
+          account_number: personalInfo.account_number,
+          account_name: personalInfo.account_name,
+          health_card: personalInfo.health_card,
+          work_card: personalInfo.work_card,
+        },
+      };
+    } catch (error) {
+      // Jika error yang dilemparkan adalah NotFoundException atau UnauthorizedException, lempar kembali
+      if (
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+
+      // Tangani error internal lainnya
+      throw new InternalServerErrorException('Error get general information');
+    }
+  }
+
+  async editPersonalInformation(
+    token_auth: string,
+    editPersonalInformationEmployeeDto: EditPersonalInformationEmployeeDto,
+  ): Promise<any> {
+    const { id_employee, id_card, tax_identification_number } =
+      editPersonalInformationEmployeeDto;
+
+    try {
+      // Verifikasi token
+      let decodedToken;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decodedToken = this.jwtService.verify(token_auth); // Verifikasi token JWT
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
+      }
+
+      // Verifikasi apakah token valid di database
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
+        throw new NotFoundException('Token not found');
+      }
+
+      // Cari employee berdasarkan id_employee
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+        relations: ['personalInformation'], // Memuat relasi personal information
+      });
+
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      // Perbarui informasi di PersonalInformation
+      const personalInformation = employee.personalInformation;
+
+      if (!personalInformation) {
+        throw new NotFoundException('Personal information not found');
+      }
+
+      // Update data personalInformation
+      personalInformation.id_card = id_card;
+      personalInformation.tax_identification_number = tax_identification_number;
+
+      // Simpan perubahan personalInformation
+      await this.personalInformationRepository.save(personalInformation);
+
+      // Kembalikan response sukses
+      return {
+        statusCode: 201,
+        status: 'success',
+        message: 'Successfully edit personal information',
+      };
+    } catch (error) {
+      // Tangani error khusus
+      if (
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+
+      // Tangani error internal lainnya
+      throw new InternalServerErrorException('Error edit personal information');
     }
   }
 }

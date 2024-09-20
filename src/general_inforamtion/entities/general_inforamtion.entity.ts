@@ -36,4 +36,5 @@ export class GeneralInformation {
 
   @OneToOne(() => Employee, (employee) => employee.generalInformation)
   employee: Employee;
+  employee_name: string;
 }

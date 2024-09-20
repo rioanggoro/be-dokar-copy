@@ -14,6 +14,7 @@ import { JobInformation } from 'src/job_information/entities/job_information.ent
 import { ClockIn } from 'src/clockin/entities/clockin.entity';
 import { ClockOut } from 'src/clockout/entities/clockout.entity';
 import { DebtRequest } from 'src/debt_request/entities/debt_request.entity';
+import { PersonalInformation } from 'src/personal_information/entities/personal_information.entity';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { DebtRequest } from 'src/debt_request/entities/debt_request.entity';
       Employee,
       Company,
       GeneralInformation,
+      PersonalInformation,
       PermissionAttendance,
       ClockIn,
       ClockOut,
