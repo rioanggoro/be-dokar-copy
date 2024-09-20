@@ -761,7 +761,7 @@ export class EmployeeService {
 
       // Kembalikan informasi umum dari employee
       return {
-        statusCode: 200,
+        statusCode: 201,
         status: 'success',
         message: 'Successfully get general information',
         general_information: {
@@ -930,7 +930,7 @@ export class EmployeeService {
 
       // Kembalikan informasi umum dari employee
       return {
-        statusCode: 200,
+        statusCode: 201,
         status: 'success',
         message: 'Successfully get personal information',
         personal_information: {
