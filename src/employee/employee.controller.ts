@@ -24,6 +24,7 @@ import { GetGeneralInformationEmployeeDto } from './dto/get_general_information-
 import { EditGeneralInformationEmployeeDto } from './dto/edit_general_information-employee.dto';
 import { GetPersonalInformationEmployeeDto } from './dto/get_personal_information.dto';
 import { EditPersonalInformationEmployeeDto } from './dto/edit_personal_information-employee.dto';
+import { LogoutEmployeeDto } from './dto/logout-employee.dto';
 
 @Controller('employee')
 export class EmployeeController {
@@ -281,5 +282,33 @@ export class EmployeeController {
       token_auth,
       editPersonalInformation,
     );
+  }
+
+  // Endpoint untuk login
+  @UseFilters(HttpExceptionFilter)
+  @UseGuards(ThrottlerGuard)
+  @Throttle(10, 60)
+  @Post('logout')
+  @UseFilters(HttpExceptionFilter)
+  @Post('logout')
+  async logout(
+    @Headers('authorization') authHeader: string,
+    @Body() logoutEmployeeDto: LogoutEmployeeDto,
+  ): Promise<any> {
+    // Cek apakah ada Authorization header
+    if (!authHeader) {
+      throw new NotFoundException('Missing Token');
+    }
+
+    // Ekstrak token dari Authorization header
+    const token_auth = authHeader.split(' ')[1];
+
+    // Cek apakah token ada setelah Bearer
+    if (!token_auth) {
+      throw new UnauthorizedException('Bearer token is missing');
+    }
+
+    // Panggil service untuk proses logout
+    return this.employeeService.logout(token_auth, logoutEmployeeDto);
   }
 }

@@ -34,6 +34,7 @@ import { EditGeneralInformationEmployeeDto } from './dto/edit_general_informatio
 import { GetPersonalInformationEmployeeDto } from './dto/get_personal_information.dto';
 import { EditPersonalInformationEmployeeDto } from './dto/edit_personal_information-employee.dto';
 import { PersonalInformation } from 'src/personal_information/entities/personal_information.entity';
+import { LogoutEmployeeDto } from './dto/logout-employee.dto';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -853,7 +854,7 @@ export class EmployeeService {
       // Perbarui informasi di GeneralInformation
       const generalInformation = employee.generalInformation;
 
-       if (!generalInformation) {
+      if (!generalInformation) {
         throw new NotFoundException(
           'General information not found for this employee',
         );
@@ -889,7 +890,9 @@ export class EmployeeService {
       }
 
       // Tangani error internal
-      throw new InternalServerErrorException('Error editing general information ');
+      throw new InternalServerErrorException(
+        'Error editing general information ',
+      );
     }
   }
 
@@ -1042,6 +1045,71 @@ export class EmployeeService {
 
       // Tangani error internal lainnya
       throw new InternalServerErrorException('Error edit personal information');
+    }
+  }
+
+  // Logout service method
+  async logout(
+    token_auth: string,
+    logoutEmployeeDto: LogoutEmployeeDto,
+  ): Promise<any> {
+    const { id_employee } = logoutEmployeeDto;
+
+    try {
+      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
+      let decodedToken;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decodedToken = this.jwtService.verify(token_auth); // Verifikasi JWT token
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
+      }
+
+      // Verifikasi apakah token valid di database
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
+        throw new NotFoundException('Token not found');
+      }
+
+      // Cari employee berdasarkan id_employee
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+      });
+
+      // Jika employee tidak ditemukan, lemparkan NotFoundException
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      // Update token_auth untuk logout (menghapus token dari database atau set sebagai null)
+      employee.token_auth = null;
+      await this.employeeRepository.save(employee);
+
+      // Kembalikan respon sukses
+      return {
+        statusCode: 200,
+        status: 'success',
+        message: 'Successfully logout account',
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+      // Tangani error internal lainnya
+      throw new InternalServerErrorException('Error logout account');
     }
   }
 }
