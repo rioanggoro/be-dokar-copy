@@ -305,7 +305,6 @@ export class EmployeeService {
         message: 'Successfully sent OTP to email',
       };
     } catch (error) {
-      console.error('Error detail:', error);
       if (
         error instanceof BadRequestException ||
         error instanceof NotFoundException ||
@@ -357,7 +356,6 @@ export class EmployeeService {
 
       // Ubah OTP yang diterima menjadi string
       if (record.otp !== otp.toString()) {
-        console.log('Invalid OTP');
         throw new UnauthorizedException('Invalid OTP');
       }
 
@@ -430,7 +428,6 @@ export class EmployeeService {
       }
 
       // Tangani error yang tidak terduga dan log error internal untuk debugging
-      console.error('Error changing password:', error);
       throw new InternalServerErrorException('Error changing password');
     }
   }
@@ -665,7 +662,6 @@ export class EmployeeService {
       });
 
       if (!employee) {
-        console.error('Employee not found for id_employee:', id_employee);
         throw new NotFoundException('Employee not found');
       }
 
@@ -1016,25 +1012,8 @@ export class EmployeeService {
       personalInformation.id_card = id_card;
       personalInformation.tax_identification_number = tax_identification_number;
 
-      console.log('Before Save:', personalInformation);
       // Simpan perubahan personalInformation
       await this.personalInformationRepository.save(personalInformation);
-
-      console.log('Data Saved. Now checking DB.');
-
-      // Periksa apakah data benar-benar tersimpan
-      const updatedPersonalInformation =
-        await this.personalInformationRepository.findOne({
-          where: {
-            id_personal_information:
-              personalInformation.id_personal_information,
-          }, // Gunakan id_personal_information untuk mengecek update
-        });
-
-      console.log(
-        'Updated Personal Information from DB:',
-        updatedPersonalInformation,
-      ); // Logging setelah data disimpan
 
       // Kembalikan response sukses
       return {
