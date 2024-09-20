@@ -84,7 +84,13 @@ export class EmployeeService {
     });
 
     if (!employee) {
-      throw new NotFoundException('Employee not found for this company'); // Tetap di service
+      throw new NotFoundException('Employee not found for this company');
+    }
+    // Pastikan bahwa email tidak bisa diubah
+    if (employee.email !== email) {
+      throw new BadRequestException(
+        'Account is already registered, please use another account',
+      );
     }
 
     // Cek apakah email sudah terdaftar untuk employee ini
@@ -403,7 +409,7 @@ export class EmployeeService {
       );
       if (isOldPasswordValid) {
         throw new BadRequestException(
-          'New password cannot be the same as the old password',
+          'Account is already registered, please use another account',
         );
       }
 
