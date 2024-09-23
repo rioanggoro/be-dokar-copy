@@ -35,6 +35,7 @@ import { GetPersonalInformationEmployeeDto } from './dto/get_personal_informatio
 import { EditPersonalInformationEmployeeDto } from './dto/edit_personal_information-employee.dto';
 import { PersonalInformation } from 'src/personal_information/entities/personal_information.entity';
 import { LogoutEmployeeDto } from './dto/logout-employee.dto';
+import { GetCardAssuranceEmployeeDto } from './dto/get_card-assurance-employee.dto';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -1110,6 +1111,77 @@ export class EmployeeService {
       }
       // Tangani error internal lainnya
       throw new InternalServerErrorException('Error logout account');
+    }
+  }
+
+  async getCardAssurance(
+    token_auth: string,
+    getCardAssuranceEmployeeDto: GetCardAssuranceEmployeeDto,
+  ): Promise<any> {
+    const { id_employee } = getCardAssuranceEmployeeDto;
+
+    try {
+      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
+      let decodedToken;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decodedToken = this.jwtService.verify(token_auth); // Verifikasi JWT token
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
+      }
+
+      // Verifikasi apakah token valid di database
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
+        throw new NotFoundException('Token not found');
+      }
+
+      // Cari employee berdasarkan id_employee
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+        relations: ['personalInformation'], // Pastikan relasi general information dimuat
+      });
+
+      // Jika employee tidak ditemukan, lemparkan NotFoundException
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      // Ambil informasi umum (general information) dari employee yang ditemukan
+      const cardAssurance = employee.personalInformation;
+
+      // Kembalikan informasi umum dari employee
+      return {
+        statusCode: 201,
+        status: 'success',
+        message: 'Successfully get card assurance',
+        cardAssurance: {
+          employee_name: employee.employee_name,
+          id_card: cardAssurance.id_card,
+          work_card: cardAssurance.work_card,
+          registration_period: cardAssurance.registration_period,
+        },
+      };
+    } catch (error) {
+      // Jika error yang dilemparkan adalah NotFoundException atau UnauthorizedException, lempar kembali
+      if (
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+
+      // Tangani error internal lainnya
+      throw new InternalServerErrorException('Error get card assurance');
     }
   }
 }

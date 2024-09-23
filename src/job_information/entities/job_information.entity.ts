@@ -24,8 +24,8 @@ export class JobInformation {
   @Column({ type: 'varchar', length: 100 })
   shift: string;
 
-  @Column({ type: 'time without time zone' })
-  late_tolerance: string;
+  @Column({ type: 'varchar' })
+  late_deduction: string;
 
   @Column({ type: 'varchar', length: 50 })
   attendance_mode: string;

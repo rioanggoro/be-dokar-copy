@@ -39,6 +39,9 @@ export class Company {
   @Column({ type: 'varchar', length: 10 })
   company_role: string;
 
+  @Column({ type: 'interval' })
+  late_tolerance: string;
+
   // 1 perusahaan have many employees
   @OneToMany(() => Employee, (employee) => employee.company)
   employees: Employee[];

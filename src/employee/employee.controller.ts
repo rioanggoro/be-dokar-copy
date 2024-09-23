@@ -25,6 +25,7 @@ import { EditGeneralInformationEmployeeDto } from './dto/edit_general_informatio
 import { GetPersonalInformationEmployeeDto } from './dto/get_personal_information.dto';
 import { EditPersonalInformationEmployeeDto } from './dto/edit_personal_information-employee.dto';
 import { LogoutEmployeeDto } from './dto/logout-employee.dto';
+import { GetCardAssuranceEmployeeDto } from './dto/get_card-assurance-employee.dto';
 
 @Controller('employee')
 export class EmployeeController {
@@ -284,7 +285,7 @@ export class EmployeeController {
     );
   }
 
-  // Endpoint untuk login
+  // Endpoint untuk logout
   @UseFilters(HttpExceptionFilter)
   @UseGuards(ThrottlerGuard)
   @Throttle(10, 60)
@@ -310,5 +311,31 @@ export class EmployeeController {
 
     // Panggil service untuk proses logout
     return this.employeeService.logout(token_auth, logoutEmployeeDto);
+  }
+
+  @UseFilters(HttpExceptionFilter)
+  @UseGuards(ThrottlerGuard)
+  @Throttle(10, 60)
+  @Post('/assurance/get')
+  async getAssuranceCard(
+    @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
+    @Body() getCardAssuranceEmployeeDto: GetCardAssuranceEmployeeDto,
+  ): Promise<any> {
+    // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
+    if (!authHeader) {
+      throw new NotFoundException('Missing Token');
+    }
+
+    const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization
+
+    if (!token_auth) {
+      throw new UnauthorizedException('Bearer token is missing');
+    }
+
+    // Panggil service untuk mengambil general information dengan DTO dan token
+    return this.employeeService.getCardAssurance(
+      token_auth,
+      getCardAssuranceEmployeeDto,
+    );
   }
 }
