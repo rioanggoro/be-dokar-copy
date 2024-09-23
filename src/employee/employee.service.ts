@@ -37,6 +37,7 @@ import { PersonalInformation } from 'src/personal_information/entities/personal_
 import { LogoutEmployeeDto } from './dto/logout-employee.dto';
 import { GetCardAssuranceEmployeeDto } from './dto/get_card-assurance-employee.dto';
 import { EditPhotoEmployeeDto } from './dto/edit_photo-employee-dto';
+import { GetJobInformationEmployeeDto } from './dto/get_job_information-employee.dto';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -1246,6 +1247,90 @@ export class EmployeeService {
         throw error;
       }
       throw new InternalServerErrorException('Error editing employee photo');
+    }
+  }
+
+  async getJobInformation(
+    token_auth: string,
+    getJobInformationEmployeeDto: GetJobInformationEmployeeDto,
+  ): Promise<any> {
+    const { id_employee } = getJobInformationEmployeeDto;
+
+    try {
+      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
+      let decodedToken;
+      try {
+        decodedToken = this.jwtService.verify(token_auth); // Verifikasi JWT token
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
+      }
+
+      // Verifikasi apakah token valid di database
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
+        throw new NotFoundException('Token not found');
+      }
+
+      // Cari employee berdasarkan id_employee, dan muat relasi jobInformation dan company
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+        relations: ['jobInformation', 'jobInformation.company'], // Tambahkan relasi jobInformation dan company
+      });
+
+      // Jika employee tidak ditemukan, lemparkan NotFoundException
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      const jobInformation = employee.jobInformation;
+
+      // Jika jobInformation atau company tidak ditemukan
+      if (!jobInformation || !jobInformation.company) {
+        throw new NotFoundException('Job information or company not found');
+      }
+
+      // Ambil late_tolerance dari company
+      const late_tolerance = jobInformation.company.late_tolerance;
+
+      // Kembalikan informasi pekerjaan dari employee
+      return {
+        statusCode: 201,
+        status: 'success',
+        message: 'Successfully get job information',
+        jobInformation: {
+          company_name: jobInformation.company.company_name, // Ubah menjadi jobInformation.company.company_name
+          department: jobInformation.user_department,
+          position: jobInformation.user_position,
+          user_entry_date: jobInformation.user_entry_date,
+          status: jobInformation.user_status,
+          late_deduction: jobInformation.late_deduction,
+          late_tolerance: late_tolerance,
+          attendance_mode: jobInformation.attendance_mode,
+          out_of_office_attendance: jobInformation.out_of_office_attendance,
+          salary_per_day: jobInformation.salary_per_day,
+        },
+      };
+    } catch (error) {
+      // Jika error yang dilemparkan adalah NotFoundException atau UnauthorizedException, lempar kembali
+      if (
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+
+      // Tangani error internal lainnya
+      console.error('Error detail:', error); // Untuk mendapatkan detail error
+      throw new InternalServerErrorException('Error get job information');
     }
   }
 }

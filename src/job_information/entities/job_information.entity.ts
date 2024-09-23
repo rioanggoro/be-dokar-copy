@@ -1,5 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToOne } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  OneToOne,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Employee } from 'src/employee/entities/employee.entity';
+import { Company } from 'src/company/entities/company.entity';
 
 @Entity('job_information')
 export class JobInformation {
@@ -37,4 +45,8 @@ export class JobInformation {
   salary_per_day: number;
   @OneToOne(() => Employee, (employee) => employee.jobInformation)
   employee: Employee;
+
+  @ManyToOne(() => Company, (company) => company.jobInformations)
+  @JoinColumn({ name: 'company_id' })
+  company: Company;
 }

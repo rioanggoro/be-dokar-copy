@@ -27,6 +27,7 @@ import { EditPersonalInformationEmployeeDto } from './dto/edit_personal_informat
 import { LogoutEmployeeDto } from './dto/logout-employee.dto';
 import { GetCardAssuranceEmployeeDto } from './dto/get_card-assurance-employee.dto';
 import { EditPhotoEmployeeDto } from './dto/edit_photo-employee-dto';
+import { GetJobInformationEmployeeDto } from './dto/get_job_information-employee.dto';
 
 @Controller('employee')
 export class EmployeeController {
@@ -361,6 +362,32 @@ export class EmployeeController {
     return this.employeeService.editPhoto(
       token_auth, // Teruskan token ke service
       editPhotoEmployeeDto,
+    );
+  }
+
+  @UseFilters(HttpExceptionFilter)
+  @UseGuards(ThrottlerGuard)
+  @Throttle(10, 60)
+  @Post('/job_information/get')
+  async getJobInformation(
+    @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
+    @Body() getJobInformationEmployeeDto: GetJobInformationEmployeeDto,
+  ): Promise<any> {
+    // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
+    if (!authHeader) {
+      throw new NotFoundException('Missing Token');
+    }
+
+    const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization
+
+    if (!token_auth) {
+      throw new UnauthorizedException('Bearer token is missing');
+    }
+
+    // Panggil service untuk melakukan operasi createPermissionAttendance dengan DTO dan token
+    return this.employeeService.getJobInformation(
+      token_auth, // Teruskan token ke service
+      getJobInformationEmployeeDto,
     );
   }
 }

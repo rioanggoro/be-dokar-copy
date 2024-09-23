@@ -1,6 +1,7 @@
 import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { Employee } from 'src/employee/entities/employee.entity';
 import { DebtRequest } from 'src/debt_request/entities/debt_request.entity';
+import { JobInformation } from 'src/job_information/entities/job_information.entity';
 
 //Entity untuk merelasikan tabel tabel
 
@@ -49,4 +50,7 @@ export class Company {
   // 1 perusahaan have many debt requests
   @OneToMany(() => DebtRequest, (debtRequest) => debtRequest.company)
   debtRequests: DebtRequest[];
+
+  @OneToMany(() => JobInformation, (jobInformation) => jobInformation.company)
+  jobInformations: JobInformation[];
 }
