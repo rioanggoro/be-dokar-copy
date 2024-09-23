@@ -290,10 +290,8 @@ export class EmployeeController {
   @UseGuards(ThrottlerGuard)
   @Throttle(10, 60)
   @Post('logout')
-  @UseFilters(HttpExceptionFilter)
-  @Post('logout')
   async logout(
-    @Headers('authorization') authHeader: string,
+    @Headers('Authorization') authHeader: string,
     @Body() logoutEmployeeDto: LogoutEmployeeDto,
   ): Promise<any> {
     // Cek apakah ada Authorization header
