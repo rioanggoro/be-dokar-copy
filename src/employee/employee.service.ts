@@ -36,6 +36,7 @@ import { EditPersonalInformationEmployeeDto } from './dto/edit_personal_informat
 import { PersonalInformation } from 'src/personal_information/entities/personal_information.entity';
 import { LogoutEmployeeDto } from './dto/logout-employee.dto';
 import { GetCardAssuranceEmployeeDto } from './dto/get_card-assurance-employee.dto';
+import { EditPhotoEmployeeDto } from './dto/edit_photo-employee-dto';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -1182,6 +1183,69 @@ export class EmployeeService {
 
       // Tangani error internal lainnya
       throw new InternalServerErrorException('Error get card assurance');
+    }
+  }
+
+  async editPhoto(
+    token_auth: string, // Terima token_auth dari controller
+    editPhotoEmployeeDto: EditPhotoEmployeeDto,
+  ): Promise<any> {
+    const { id_employee, photo } = editPhotoEmployeeDto;
+
+    try {
+      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
+      let decodedToken;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decodedToken = this.jwtService.verify(token_auth); // Verifikasi JWT token
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
+      }
+
+      // Periksa apakah token valid
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
+        throw new NotFoundException('Token not found');
+      }
+
+      // Cari employee berdasarkan id_employee
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+      });
+
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      // Update photo di instance employee yang sudah ada
+      employee.employee_photo = photo;
+
+      // Simpan perubahan
+      await this.employeeRepository.save(employee);
+
+      return {
+        statusCode: 201,
+        status: 'success',
+        message: 'Successfully edited photo',
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Error editing employee photo');
     }
   }
 }
