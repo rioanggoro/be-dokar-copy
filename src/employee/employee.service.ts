@@ -962,6 +962,7 @@ export class EmployeeService {
         },
       };
     } catch (error) {
+      console.error('Error get personal information:', error);
       // Jika error yang dilemparkan adalah NotFoundException atau UnauthorizedException, lempar kembali
       if (
         error instanceof NotFoundException ||
