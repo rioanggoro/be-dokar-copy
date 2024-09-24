@@ -37,6 +37,7 @@ import { PersonalInformation } from 'src/personal_information/entities/personal_
 import { LogoutEmployeeDto } from './dto/logout-employee.dto';
 import { GetCardAssuranceEmployeeDto } from './dto/get_card-assurance-employee.dto';
 import { EditPhotoEmployeeDto } from './dto/edit_photo-employee-dto';
+import { GetJobInformationEmployeeDto } from './dto/get_job_information-employee.dto';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -1246,6 +1247,82 @@ export class EmployeeService {
         throw error;
       }
       throw new InternalServerErrorException('Error editing employee photo');
+    }
+  }
+
+  async getJobInformation(
+    token_auth: string,
+    getJobInformationEmployeeDto: GetJobInformationEmployeeDto,
+  ): Promise<any> {
+    const { id_employee } = getJobInformationEmployeeDto;
+
+    try {
+      let decodedToken;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decodedToken = this.jwtService.verify(token_auth);
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
+      }
+
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
+        throw new NotFoundException('Token not found');
+      }
+
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+        relations: ['jobInformation', 'jobInformation.company'],
+      });
+
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      const jobInformation = employee.jobInformation;
+
+      if (!jobInformation || !jobInformation.company) {
+        throw new NotFoundException('Job information or company not found');
+      }
+
+      const late_tolerance = jobInformation.company.late_tolerance;
+
+      return {
+        statusCode: 201,
+        status: 'success',
+        message: 'Successfully get job information',
+        job_information: {
+          company_name: jobInformation.company.company_name,
+          department: jobInformation.user_department,
+          position: jobInformation.user_position,
+          user_entry_date: jobInformation.user_entry_date,
+          status: jobInformation.user_status,
+          late_deduction: jobInformation.late_deduction,
+          late_tolerance: late_tolerance,
+          attendance_mode: jobInformation.attendance_mode,
+          out_of_office_attendance: jobInformation.out_of_office_attendance,
+          salary_per_day: jobInformation.salary_per_day,
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+
+      console.error('Error detail:', error);
+      throw new InternalServerErrorException('Error get job information');
     }
   }
 }
