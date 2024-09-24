@@ -1257,10 +1257,10 @@ export class EmployeeService {
     const { id_employee } = getJobInformationEmployeeDto;
 
     try {
-      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
       let decodedToken;
       try {
-        decodedToken = this.jwtService.verify(token_auth); // Verifikasi JWT token
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decodedToken = this.jwtService.verify(token_auth);
       } catch (error) {
         if (error.name === 'JsonWebTokenError') {
           throw new UnauthorizedException('Invalid token format');
@@ -1271,7 +1271,6 @@ export class EmployeeService {
         }
       }
 
-      // Verifikasi apakah token valid di database
       const validToken = await this.employeeRepository.findOne({
         where: { token_auth },
       });
@@ -1280,34 +1279,29 @@ export class EmployeeService {
         throw new NotFoundException('Token not found');
       }
 
-      // Cari employee berdasarkan id_employee, dan muat relasi jobInformation dan company
       const employee = await this.employeeRepository.findOne({
         where: { id_employee },
-        relations: ['jobInformation', 'jobInformation.company'], // Tambahkan relasi jobInformation dan company
+        relations: ['jobInformation', 'jobInformation.company'],
       });
 
-      // Jika employee tidak ditemukan, lemparkan NotFoundException
       if (!employee) {
         throw new NotFoundException('Employee not found');
       }
 
       const jobInformation = employee.jobInformation;
 
-      // Jika jobInformation atau company tidak ditemukan
       if (!jobInformation || !jobInformation.company) {
         throw new NotFoundException('Job information or company not found');
       }
 
-      // Ambil late_tolerance dari company
       const late_tolerance = jobInformation.company.late_tolerance;
 
-      // Kembalikan informasi pekerjaan dari employee
       return {
         statusCode: 201,
         status: 'success',
         message: 'Successfully get job information',
-        jobInformation: {
-          company_name: jobInformation.company.company_name, // Ubah menjadi jobInformation.company.company_name
+        job_information: {
+          company_name: jobInformation.company.company_name,
           department: jobInformation.user_department,
           position: jobInformation.user_position,
           user_entry_date: jobInformation.user_entry_date,
@@ -1320,7 +1314,6 @@ export class EmployeeService {
         },
       };
     } catch (error) {
-      // Jika error yang dilemparkan adalah NotFoundException atau UnauthorizedException, lempar kembali
       if (
         error instanceof NotFoundException ||
         error instanceof UnauthorizedException
@@ -1328,8 +1321,7 @@ export class EmployeeService {
         throw error;
       }
 
-      // Tangani error internal lainnya
-      console.error('Error detail:', error); // Untuk mendapatkan detail error
+      console.error('Error detail:', error);
       throw new InternalServerErrorException('Error get job information');
     }
   }
