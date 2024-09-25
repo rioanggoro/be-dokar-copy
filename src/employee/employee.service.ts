@@ -38,6 +38,7 @@ import { LogoutEmployeeDto } from './dto/logout-employee.dto';
 import { GetCardAssuranceEmployeeDto } from './dto/get_card-assurance-employee.dto';
 import { EditPhotoEmployeeDto } from './dto/edit_photo-employee-dto';
 import { GetJobInformationEmployeeDto } from './dto/get_job_information-employee.dto';
+import { DebtDetailEmployeelDto } from './dto/debt_detail-employee.dto';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -1324,6 +1325,78 @@ export class EmployeeService {
 
       console.error('Error detail:', error);
       throw new InternalServerErrorException('Error get job information');
+    }
+  }
+
+  async getDebtDetail(
+    token_auth: string,
+    getDebtDetaiDto: DebtDetailEmployeelDto,
+  ): Promise<any> {
+    const { id_employee } = getDebtDetaiDto;
+
+    try {
+      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
+      let decodedToken;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decodedToken = this.jwtService.verify(token_auth); // Verifikasi JWT token
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
+      }
+
+      // Verifikasi apakah token valid di database
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
+        throw new NotFoundException('Token not found');
+      }
+
+      // Cari employee berdasarkan id_employee dari DTO dan relasi dengan debt_request
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+        relations: ['debtRequests'], // Pastikan relasi debtRequests dimuat
+      });
+
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      // Ambil informasi debt request pertama (asumsi satu request per employee)
+      const debtRequest = employee.debtRequests[0];
+      return {
+        statusCode: 201,
+        status: 'success',
+        message: 'Successfully get detail debt',
+        debt_detail: {
+          date_request: debtRequest.created_at,
+          company_name: debtRequest.company_name,
+          employee_name: debtRequest.employee_name,
+          nominal_request: debtRequest.nominal_request,
+          status: debtRequest.status,
+          bank_name: debtRequest.bank_name,
+          account_name: debtRequest.account_name,
+          account_number: debtRequest.account_number,
+          borrowing_cost: debtRequest.borrowing_cost,
+          admin_fee: debtRequest.admin_fee,
+          grand_total_request: debtRequest.grand_total_request,
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Error get debt detail');
     }
   }
 }
