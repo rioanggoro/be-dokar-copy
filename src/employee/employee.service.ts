@@ -1332,14 +1332,13 @@ export class EmployeeService {
     token_auth: string,
     getDebtDetaiDto: DebtDetailEmployeelDto,
   ): Promise<any> {
-    const { id_employee } = getDebtDetaiDto;
+    const { id_employee, id_debt_request } = getDebtDetaiDto;
 
     try {
-      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
+      // Verifying the token (checking if it is valid)
       let decodedToken;
       try {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        decodedToken = this.jwtService.verify(token_auth); // Verifikasi JWT token
+        decodedToken = this.jwtService.verify(token_auth); // Verify JWT token
       } catch (error) {
         if (error.name === 'JsonWebTokenError') {
           throw new UnauthorizedException('Invalid token format');
@@ -1350,7 +1349,7 @@ export class EmployeeService {
         }
       }
 
-      // Verifikasi apakah token valid di database
+      // Checking if the token is valid in the database
       const validToken = await this.employeeRepository.findOne({
         where: { token_auth },
       });
@@ -1359,22 +1358,30 @@ export class EmployeeService {
         throw new NotFoundException('Token not found');
       }
 
-      // Cari employee berdasarkan id_employee dari DTO dan relasi dengan debt_request
+      // Finding the employee by id_employee
       const employee = await this.employeeRepository.findOne({
         where: { id_employee },
-        relations: ['debtRequests'], // Pastikan relasi debtRequests dimuat
+        relations: ['debtRequests'], // Load related debtRequests
       });
 
       if (!employee) {
         throw new NotFoundException('Employee not found');
       }
 
-      // Ambil informasi debt request pertama (asumsi satu request per employee)
-      const debtRequest = employee.debtRequests[0];
+      // Finding the specific debt request by id_debt_request
+      const debtRequest = await this.debtRequestRepository.findOne({
+        where: { id_debt_request, employee: { id_employee } }, // Ensure it's the employee's request
+      });
+
+      if (!debtRequest) {
+        throw new NotFoundException('Debt request not found');
+      }
+
+      // Returning the debt request details
       return {
         statusCode: 201,
         status: 'success',
-        message: 'Successfully get detail debt',
+        message: 'Successfully retrieved debt detail',
         debt_detail: {
           date_request: debtRequest.created_at,
           company_name: debtRequest.company_name,
@@ -1390,13 +1397,16 @@ export class EmployeeService {
         },
       };
     } catch (error) {
+      // Handle common errors
       if (
         error instanceof NotFoundException ||
         error instanceof UnauthorizedException
       ) {
         throw error;
       }
-      throw new InternalServerErrorException('Error get debt detail');
+
+      // Handle internal server errors
+      throw new InternalServerErrorException('Error retrieving debt detail');
     }
   }
 }
