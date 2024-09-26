@@ -66,7 +66,7 @@ export class EmployeeService {
     @InjectRepository(PersonalInformation)
     private personalInformationRepository: Repository<PersonalInformation>,
 
-    private jwtService: JwtService, // Injeksi JwtService
+    private jwtService: JwtService,
   ) {}
 
   async registerEmployee(
@@ -75,7 +75,6 @@ export class EmployeeService {
     const { id_company, id_employee, email, password, telephone } =
       registerEmployeeDto;
 
-    // Cek apakah id_company valid
     const company = await this.companyRepository.findOne({
       where: { id_company: id_company },
     });
@@ -964,8 +963,6 @@ export class EmployeeService {
         },
       };
     } catch (error) {
-      console.error('Error get personal information:', error);
-      // Jika error yang dilemparkan adalah NotFoundException atau UnauthorizedException, lempar kembali
       if (
         error instanceof NotFoundException ||
         error instanceof UnauthorizedException
@@ -1453,20 +1450,17 @@ export class EmployeeService {
         throw new NotFoundException('Employee not found');
       }
 
-      // Finding the specific permission attendance detail by id_permission_attendance
       const permissionAttendanceDetail =
         await this.permissionAttendanceRepository.findOne({
           where: {
             id_permission_attendance: id_permission_attendance,
             employee: { id_employee },
-          }, // Ensure it's the employee's request
+          },
         });
 
       if (!permissionAttendanceDetail) {
         throw new NotFoundException('Permission attendance not found');
       }
-
-      // Returning the permission attendance details
       return {
         statusCode: 201,
         status: 'success',
@@ -1493,7 +1487,6 @@ export class EmployeeService {
         throw error;
       }
 
-      // Handle internal server errors
       throw new InternalServerErrorException(
         'Error retrieving permission attendance detail',
       );
