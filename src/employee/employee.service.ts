@@ -39,6 +39,7 @@ import { GetCardAssuranceEmployeeDto } from './dto/get_card-assurance-employee.d
 import { EditPhotoEmployeeDto } from './dto/edit_photo-employee-dto';
 import { GetJobInformationEmployeeDto } from './dto/get_job_information-employee.dto';
 import { DebtDetailEmployeelDto } from './dto/debt_detail-employee.dto';
+import { PermissionAttendanceDetailEmployeeDto } from './dto/permission_attendance_detail-employee.dto';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -1338,6 +1339,7 @@ export class EmployeeService {
       // Verifying the token (checking if it is valid)
       let decodedToken;
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         decodedToken = this.jwtService.verify(token_auth); // Verify JWT token
       } catch (error) {
         if (error.name === 'JsonWebTokenError') {
@@ -1368,7 +1370,6 @@ export class EmployeeService {
         throw new NotFoundException('Employee not found');
       }
 
-      // Finding the specific debt request by id_debt_request
       const debtRequest = await this.debtRequestRepository.findOne({
         where: { id_debt_request, employee: { id_employee } }, // Ensure it's the employee's request
       });
@@ -1407,6 +1408,95 @@ export class EmployeeService {
 
       // Handle internal server errors
       throw new InternalServerErrorException('Error retrieving debt detail');
+    }
+  }
+
+  async permissionAttendanceDetail(
+    token_auth: string,
+    permissionAttendanceDetailDto: PermissionAttendanceDetailEmployeeDto,
+  ): Promise<any> {
+    const { id_employee, id_permission_attendance } =
+      permissionAttendanceDetailDto;
+
+    try {
+      // Verifying the token (checking if it is valid)
+      let decodedToken;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decodedToken = this.jwtService.verify(token_auth); // Verify JWT token
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
+      }
+
+      // Checking if the token is valid in the database
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
+        throw new NotFoundException('Token not found');
+      }
+
+      // Finding the employee by id_employee
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+        relations: ['permissionAttendances'], // Assuming there's a relation for permission attendances
+      });
+
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      // Finding the specific permission attendance detail by id_permission_attendance
+      const permissionAttendanceDetail =
+        await this.permissionAttendanceRepository.findOne({
+          where: {
+            id_approval: id_permission_attendance,
+            employee: { id_employee },
+          }, // Ensure it's the employee's request
+        });
+
+      if (!permissionAttendanceDetail) {
+        throw new NotFoundException('Permission attendance not found');
+      }
+
+      // Returning the permission attendance details
+      return {
+        statusCode: 200,
+        status: 'success',
+        message: 'Successfully retrieved permission attendance detail',
+        attendance_detail: {
+          date_request_permission:
+            permissionAttendanceDetail.date_request_permission,
+          company_name: permissionAttendanceDetail.company_name,
+          employee_name: permissionAttendanceDetail.employee_name,
+          department: permissionAttendanceDetail.department,
+          position: permissionAttendanceDetail.position,
+          date_start: permissionAttendanceDetail.date_start,
+          date_finish: permissionAttendanceDetail.date_finish,
+          description: permissionAttendanceDetail.description,
+          proof_of_attendance: permissionAttendanceDetail.proof_of_attendance,
+          status: permissionAttendanceDetail.status,
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+
+      // Handle internal server errors
+      throw new InternalServerErrorException(
+        'Error retrieving permission attendance detail',
+      );
     }
   }
 }

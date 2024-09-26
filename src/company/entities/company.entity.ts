@@ -2,6 +2,7 @@ import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { Employee } from 'src/employee/entities/employee.entity';
 import { DebtRequest } from 'src/debt_request/entities/debt_request.entity';
 import { JobInformation } from 'src/job_information/entities/job_information.entity';
+import { PermissionAttendance } from 'src/permission_attendance/entities/permission_attendance.entity';
 
 //Entity untuk merelasikan tabel tabel
 
@@ -53,4 +54,10 @@ export class Company {
 
   @OneToMany(() => JobInformation, (jobInformation) => jobInformation.company)
   jobInformations: JobInformation[];
+
+  @OneToMany(
+    () => PermissionAttendance,
+    (permissionAttendance) => permissionAttendance.company,
+  )
+  permissionAttendances: PermissionAttendance[];
 }
