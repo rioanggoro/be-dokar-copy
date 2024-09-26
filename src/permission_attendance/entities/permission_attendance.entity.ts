@@ -33,7 +33,7 @@ export class PermissionAttendance {
   @Column({ type: 'varchar', length: 50 })
   position: string;
 
-  @Column({ type: 'varchar', length: 20 })
+  @Column({ type: 'text' })
   proof_of_attendance: string;
 
   @Column({ type: 'date' })
