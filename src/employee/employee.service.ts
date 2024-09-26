@@ -1457,7 +1457,7 @@ export class EmployeeService {
       const permissionAttendanceDetail =
         await this.permissionAttendanceRepository.findOne({
           where: {
-            id_approval: id_permission_attendance,
+            id_permission_attendance: id_permission_attendance,
             employee: { id_employee },
           }, // Ensure it's the employee's request
         });
@@ -1468,7 +1468,7 @@ export class EmployeeService {
 
       // Returning the permission attendance details
       return {
-        statusCode: 200,
+        statusCode: 201,
         status: 'success',
         message: 'Successfully retrieved permission attendance detail',
         attendance_detail: {

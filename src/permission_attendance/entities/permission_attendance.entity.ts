@@ -11,7 +11,7 @@ import { Company } from 'src/company/entities/company.entity';
 @Entity('permission_attendance')
 export class PermissionAttendance {
   @PrimaryGeneratedColumn('increment')
-  id_approval: number;
+  id_permission_attendance: number;
 
   @ManyToOne(() => Company, (company) => company.permissionAttendances)
   @JoinColumn({ name: 'company_id' })
