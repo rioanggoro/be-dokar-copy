@@ -41,8 +41,4 @@ export class DebtRequestEmployeeDto {
   @IsString()
   @IsNotEmpty()
   department: string;
-
-  @IsString()
-  @IsNotEmpty()
-  created_at: string;
 }
