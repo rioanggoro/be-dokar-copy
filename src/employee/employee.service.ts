@@ -40,6 +40,7 @@ import { EditPhotoEmployeeDto } from './dto/edit_photo-employee-dto';
 import { GetJobInformationEmployeeDto } from './dto/get_job_information-employee.dto';
 import { DebtDetailEmployeelDto } from './dto/debt_detail-employee.dto';
 import { PermissionAttendanceDetailEmployeeDto } from './dto/permission_attendance_detail-employee.dto';
+import { DebtHistoryEmployeeDto } from './dto/debt_history-employee.dto';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -644,11 +645,11 @@ export class EmployeeService {
     } = debtRequestEmployeeDto;
 
     try {
-      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
+      // Verifikasi token JWT
       let decodedToken;
       try {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
+        decodedToken = this.jwtService.verify(token_auth); // Verifikasi token
       } catch (error) {
         if (error.name === 'JsonWebTokenError') {
           throw new UnauthorizedException('Invalid token format');
@@ -681,7 +682,6 @@ export class EmployeeService {
         throw new BadRequestException('Insufficient remaining saldo kasbon');
       }
 
-      // Validasi apakah saldo mencukupi
       if (grand_total_request > remaining_saldo_debt) {
         throw new BadRequestException(
           `Your balance is not enough. Available saldo: ${remaining_saldo_debt}`,
@@ -690,6 +690,7 @@ export class EmployeeService {
 
       // Buat objek DebtRequest baru dan isi dengan data dari DTO
       const debtRequest = new DebtRequest();
+      debtRequest.created_at = new Date().toISOString(); // Mengisi created_at secara otomatis
       debtRequest.employee = employee; // Hubungkan debt request dengan employee
       debtRequest.nominal_request = nominal_request;
       debtRequest.bank_name = bank_name;
@@ -699,19 +700,19 @@ export class EmployeeService {
       debtRequest.admin_fee = admin_fee;
       debtRequest.grand_total_request = grand_total_request;
       debtRequest.department = department;
-      debtRequest.status = 'Request'; // Set status "request,berhasil,ditolak"
+      debtRequest.status = 'Request'; // Set status menjadi "request, berhasil, ditolak"
 
       // Simpan DebtRequest ke dalam database tanpa menyimpan remaining_saldo_debt
       await this.debtRequestRepository.save(debtRequest);
 
-      // Kembalikan respons sukses bersama dengan saldo yang tersisa
+      // Kembalikan respons sukses
       return {
         statusCode: 201,
         status: 'success',
         message: 'Successfully created debt request',
       };
     } catch (error) {
-      // Tangani error lainnya
+      // Tangani error
       if (
         error instanceof BadRequestException ||
         error instanceof NotFoundException ||
@@ -1099,7 +1100,7 @@ export class EmployeeService {
 
       // Kembalikan respon sukses
       return {
-        statusCode: 200,
+        statusCode: 201,
         status: 'success',
         message: 'Successfully logout account',
       };
@@ -1490,6 +1491,88 @@ export class EmployeeService {
       throw new InternalServerErrorException(
         'Error retrieving permission attendance detail',
       );
+    }
+  }
+
+  async debtHistory(
+    token_auth: string,
+    debtHistoryEmployeeDto: DebtHistoryEmployeeDto,
+  ): Promise<any> {
+    const { id_employee } = debtHistoryEmployeeDto;
+
+    try {
+      // Verifikasi token JWT
+      let decodedToken;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decodedToken = this.jwtService.verify(token_auth); // Verifikasi token
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
+      }
+
+      // Cek apakah token valid di database
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
+        throw new NotFoundException('Token not found');
+      }
+
+      // Cari employee berdasarkan id_employee
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+        relations: ['debtRequests'], // Relasi dengan debtRequests
+      });
+
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      // Ambil history debt (kasbon) berdasarkan employee
+      const debtRequests = await this.debtRequestRepository.find({
+        where: { employee: { id_employee } },
+      });
+
+      if (!debtRequests || debtRequests.length === 0) {
+        return {
+          statusCode: 201,
+          status: 'success',
+          message: 'No debt history found for this employee',
+          history_debt: [],
+        };
+      }
+
+      // Format response
+      const historyDebtResponse = debtRequests.map((debt) => ({
+        data_debt: {
+          date_debt: debt.created_at,
+          status_debt: debt.status,
+          nominal_debt: debt.nominal_request,
+        },
+      }));
+
+      return {
+        statusCode: 201,
+        status: 'success',
+        message: 'Successfully get all history kasbon',
+        history_debt: historyDebtResponse,
+      };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException('Error get all history kasbon');
     }
   }
 }

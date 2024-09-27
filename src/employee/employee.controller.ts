@@ -30,6 +30,7 @@ import { EditPhotoEmployeeDto } from './dto/edit_photo-employee-dto';
 import { GetJobInformationEmployeeDto } from './dto/get_job_information-employee.dto';
 import { DebtDetailEmployeelDto } from './dto/debt_detail-employee.dto';
 import { PermissionAttendanceDetailEmployeeDto } from './dto/permission_attendance_detail-employee.dto';
+import { DebtHistoryEmployeeDto } from './dto/debt_history-employee.dto';
 
 @Controller('employee')
 export class EmployeeController {
@@ -443,6 +444,33 @@ export class EmployeeController {
     return this.employeeService.permissionAttendanceDetail(
       token_auth, // Teruskan token ke service
       permissionAttendanceDetailDto,
+    );
+  }
+
+  @UseFilters(HttpExceptionFilter)
+  @UseGuards(ThrottlerGuard)
+  @Throttle(10, 60)
+  @Post('/debt/history')
+  async debtHistory(
+    @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
+    @Body()
+    debtHistoryEmployeeDto: DebtHistoryEmployeeDto,
+  ): Promise<any> {
+    // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
+    if (!authHeader) {
+      throw new NotFoundException('Missing Token');
+    }
+
+    const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization
+
+    if (!token_auth) {
+      throw new UnauthorizedException('Bearer token is missing');
+    }
+
+    // Panggil service untuk melakukan operasi createPermissionAttendance dengan DTO dan token
+    return this.employeeService.debtHistory(
+      token_auth, // Teruskan token ke service
+      debtHistoryEmployeeDto,
     );
   }
 }
