@@ -1192,7 +1192,7 @@ export class EmployeeService {
     token_auth: string, // Terima token_auth dari controller
     editPhotoEmployeeDto: EditPhotoEmployeeDto,
   ): Promise<any> {
-    const { id_employee, photo } = editPhotoEmployeeDto;
+    const { id_employee } = editPhotoEmployeeDto;
 
     try {
       // Verifikasi token (memeriksa apakah token valid secara kriptografis)
@@ -1227,9 +1227,6 @@ export class EmployeeService {
       if (!employee) {
         throw new NotFoundException('Employee not found');
       }
-
-      // Update photo di instance employee yang sudah ada
-      employee.employee_photo = photo;
 
       // Simpan perubahan
       await this.employeeRepository.save(employee);

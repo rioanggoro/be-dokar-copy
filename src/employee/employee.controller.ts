@@ -7,6 +7,9 @@ import {
   UseFilters,
   UnauthorizedException,
   NotFoundException,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
 import { EmployeeService } from './employee.service';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
@@ -31,6 +34,8 @@ import { GetJobInformationEmployeeDto } from './dto/get_job_information-employee
 import { DebtDetailEmployeelDto } from './dto/debt_detail-employee.dto';
 import { PermissionAttendanceDetailEmployeeDto } from './dto/permission_attendance_detail-employee.dto';
 import { DebtHistoryEmployeeDto } from './dto/debt_history-employee.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Express } from 'express';
 
 @Controller('employee')
 export class EmployeeController {
@@ -345,10 +350,13 @@ export class EmployeeController {
   @UseFilters(HttpExceptionFilter)
   @UseGuards(ThrottlerGuard)
   @Throttle(10, 60)
+  @Throttle(10, 60)
   @Post('/edit_photo')
+  @UseInterceptors(FileInterceptor('photo')) // Menangani file upload
   async editPhoto(
     @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
-    @Body() editPhotoEmployeeDto: EditPhotoEmployeeDto,
+    @UploadedFile() file: Express.Multer.File, // Menangani file foto yang diunggah
+    @Body() body: any, // Mengambil body sebagai objek biasa
   ): Promise<any> {
     // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
     if (!authHeader) {
@@ -361,10 +369,21 @@ export class EmployeeController {
       throw new UnauthorizedException('Bearer token is missing');
     }
 
-    // Panggil service untuk melakukan operasi createPermissionAttendance dengan DTO dan token
+    // Konversi id_employee menjadi number
+    const editPhotoEmployeeDto: EditPhotoEmployeeDto = {
+      id_employee: Number(body.id_employee), // Konversi ke number
+      photo: file,
+    };
+
+    // Pastikan file foto diunggah
+    if (!file) {
+      throw new BadRequestException('Photo is required');
+    }
+
+    // Panggil service untuk melakukan operasi editPhoto
     return this.employeeService.editPhoto(
       token_auth, // Teruskan token ke service
-      editPhotoEmployeeDto,
+      editPhotoEmployeeDto, // Kirim DTO dengan file foto dan id_employee
     );
   }
 
