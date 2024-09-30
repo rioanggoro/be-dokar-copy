@@ -38,6 +38,7 @@ import { Express } from 'express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { PermissionAttendanceHistoryEmployeeDto } from './dto/permission_attendance_history-employee.dto';
+import { NotificationEmployeeDto } from './dto/notification-employee.dto';
 
 @Controller('employee')
 export class EmployeeController {
@@ -524,6 +525,32 @@ export class EmployeeController {
     return this.employeeService.permissionAttendanceHistory(
       token_auth, // Teruskan token ke service
       permissionAttendanceHistoryEmployeeDto,
+    );
+  }
+
+  @UseFilters(HttpExceptionFilter)
+  @UseGuards(ThrottlerGuard)
+  @Throttle(10, 60)
+  @Post('/notification')
+  async notification(
+    @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
+    @Body()
+    notificationEmployeeDto: NotificationEmployeeDto,
+  ): Promise<any> {
+    // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
+    if (!authHeader) {
+      throw new NotFoundException('Missing Token');
+    }
+
+    const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization
+
+    if (!token_auth) {
+      throw new UnauthorizedException('Bearer token is missing');
+    }
+
+    return this.employeeService.notification(
+      token_auth, // Teruskan token ke service
+      notificationEmployeeDto,
     );
   }
 }

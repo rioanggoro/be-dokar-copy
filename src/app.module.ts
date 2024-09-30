@@ -13,6 +13,7 @@ import { ClockinModule } from './clockin/clockin.module';
 import { ClockoutModule } from './clockout/clockout.module';
 import { DebtRequestModule } from './debt_request/debt_request.module';
 import { PersonalInformationModule } from './personal_information/personal_information.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { PersonalInformationModule } from './personal_information/personal_infor
     ClockoutModule,
     DebtRequestModule,
     PersonalInformationModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

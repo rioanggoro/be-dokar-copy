@@ -42,6 +42,8 @@ import { DebtDetailEmployeelDto } from './dto/debt_detail-employee.dto';
 import { PermissionAttendanceDetailEmployeeDto } from './dto/permission_attendance_detail-employee.dto';
 import { DebtHistoryEmployeeDto } from './dto/debt_history-employee.dto';
 import { PermissionAttendanceHistoryEmployeeDto } from './dto/permission_attendance_history-employee.dto';
+import { NotificationEmployeeDto } from './dto/notification-employee.dto';
+import { Notification } from 'src/notification/entities/notification.entity';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -67,6 +69,8 @@ export class EmployeeService {
     private debtRequestRepository: Repository<DebtRequest>,
     @InjectRepository(PersonalInformation)
     private personalInformationRepository: Repository<PersonalInformation>,
+    @InjectRepository(Notification)
+    private notificationRepository: Repository<Notification>,
 
     private jwtService: JwtService,
   ) {}
@@ -1648,6 +1652,83 @@ export class EmployeeService {
       throw new InternalServerErrorException(
         'Error get all history permission attendance',
       );
+    }
+  }
+
+  async notification(
+    token_auth: string,
+    notificationEmployeeDto: NotificationEmployeeDto,
+  ): Promise<any> {
+    const { id_employee } = notificationEmployeeDto;
+    try {
+      // Verifikasi token JWT
+      let decodedToken;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decodedToken = this.jwtService.verify(token_auth); // Verifikasi token
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
+      }
+
+      // Cek apakah token valid di database
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
+        throw new NotFoundException('Token not found');
+      }
+
+      // Cari employee berdasarkan id_employee dan relasi permissionAttendance
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+        relations: ['notifications'], // Relasi dengan notifications
+      });
+
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      // Ambil history permission (kasbon) berdasarkan employee
+      const notification = await this.notificationRepository.find({
+        where: { employee: { id_employee } },
+      });
+
+      if (!notification || notification.length === 0) {
+        throw new NotFoundException('Notification not found');
+      }
+
+      // Format response sesuai yang diminta
+      const Notification = notification.map((permission) => ({
+        data_notification: {
+          title_notification: permission.notification_type,
+          description_notification: permission.description,
+          date: permission.notification_date,
+          status: permission.status,
+        },
+      }));
+
+      return {
+        statusCode: 201,
+        status: 'success',
+        message: 'Successfully get all notification',
+        notification: Notification,
+      };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException('Error get all notification');
     }
   }
 }
