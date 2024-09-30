@@ -1192,7 +1192,7 @@ export class EmployeeService {
     token_auth: string, // Terima token_auth dari controller
     editPhotoEmployeeDto: EditPhotoEmployeeDto,
   ): Promise<any> {
-    const { id_employee } = editPhotoEmployeeDto;
+    const { id_employee, photo } = editPhotoEmployeeDto;
 
     try {
       // Verifikasi token (memeriksa apakah token valid secara kriptografis)
@@ -1229,6 +1229,7 @@ export class EmployeeService {
       }
 
       // Simpan perubahan
+      employee.employee_photo = photo;
       await this.employeeRepository.save(employee);
 
       return {

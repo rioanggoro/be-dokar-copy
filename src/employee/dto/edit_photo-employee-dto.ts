@@ -1,9 +1,11 @@
-import { IsNotEmpty, IsNumber } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
 export class EditPhotoEmployeeDto {
   @IsNumber()
   @IsNotEmpty()
   id_employee: number;
 
-  photo: Express.Multer.File;
+  @IsNotEmpty()
+  @IsString()
+  photo: string;
 }

@@ -29,13 +29,14 @@ import { GetPersonalInformationEmployeeDto } from './dto/get_personal_informatio
 import { EditPersonalInformationEmployeeDto } from './dto/edit_personal_information-employee.dto';
 import { LogoutEmployeeDto } from './dto/logout-employee.dto';
 import { GetCardAssuranceEmployeeDto } from './dto/get_card-assurance-employee.dto';
-import { EditPhotoEmployeeDto } from './dto/edit_photo-employee-dto';
 import { GetJobInformationEmployeeDto } from './dto/get_job_information-employee.dto';
 import { DebtDetailEmployeelDto } from './dto/debt_detail-employee.dto';
 import { PermissionAttendanceDetailEmployeeDto } from './dto/permission_attendance_detail-employee.dto';
 import { DebtHistoryEmployeeDto } from './dto/debt_history-employee.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Express } from 'express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
 @Controller('employee')
 export class EmployeeController {
@@ -352,39 +353,44 @@ export class EmployeeController {
   @Throttle(10, 60)
   @Throttle(10, 60)
   @Post('/edit_photo')
-  @UseInterceptors(FileInterceptor('photo')) // Menangani file upload
+  @UseInterceptors(
+    FileInterceptor('photo', {
+      storage: diskStorage({
+        destination: './uploads', // Folder tempat menyimpan file
+        filename: (req, file, cb) => {
+          // Menyimpan file dengan nama unik
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(
+            null,
+            `${file.fieldname}-${uniqueSuffix}${extname(file.originalname)}`,
+          );
+        },
+      }),
+    }),
+  )
   async editPhoto(
-    @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
-    @UploadedFile() file: Express.Multer.File, // Menangani file foto yang diunggah
-    @Body() body: any, // Mengambil body sebagai objek biasa
+    @Headers('Authorization') authHeader: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: any,
   ): Promise<any> {
-    // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
-    if (!authHeader) {
-      throw new NotFoundException('Missing Token');
-    }
+    const token_auth = authHeader.split(' ')[1];
 
-    const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization
-
-    if (!token_auth) {
-      throw new UnauthorizedException('Bearer token is missing');
-    }
-
-    // Konversi id_employee menjadi number
-    const editPhotoEmployeeDto: EditPhotoEmployeeDto = {
-      id_employee: Number(body.id_employee), // Konversi ke number
-      photo: file,
-    };
-
-    // Pastikan file foto diunggah
+    // Pastikan file ada
     if (!file) {
       throw new BadRequestException('Photo is required');
     }
 
-    // Panggil service untuk melakukan operasi editPhoto
-    return this.employeeService.editPhoto(
-      token_auth, // Teruskan token ke service
-      editPhotoEmployeeDto, // Kirim DTO dengan file foto dan id_employee
-    );
+    // Simpan path file di sini
+    const filePath = `/uploads/${file.filename}`;
+
+    // Kirim path file (bukan file itu sendiri) ke service
+    const result = await this.employeeService.editPhoto(token_auth, {
+      ...body,
+      photo: filePath,
+    });
+
+    return result;
   }
 
   @UseFilters(HttpExceptionFilter)
