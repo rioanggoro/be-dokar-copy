@@ -49,5 +49,5 @@ export class PermissionAttendance {
   status: string;
 
   @Column({ type: 'date' })
-  date_request_permission: Date;
+  date_request_permission: string;
 }

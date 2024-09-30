@@ -37,6 +37,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Express } from 'express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { PermissionAttendanceHistoryEmployeeDto } from './dto/permission_attendance_history-employee.dto';
 
 @Controller('employee')
 export class EmployeeController {
@@ -496,6 +497,33 @@ export class EmployeeController {
     return this.employeeService.debtHistory(
       token_auth, // Teruskan token ke service
       debtHistoryEmployeeDto,
+    );
+  }
+
+  @UseFilters(HttpExceptionFilter)
+  @UseGuards(ThrottlerGuard)
+  @Throttle(10, 60)
+  @Post('/permission_attendance/history')
+  async permissionAttendanceHistory(
+    @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
+    @Body()
+    permissionAttendanceHistoryEmployeeDto: PermissionAttendanceHistoryEmployeeDto,
+  ): Promise<any> {
+    // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
+    if (!authHeader) {
+      throw new NotFoundException('Missing Token');
+    }
+
+    const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization
+
+    if (!token_auth) {
+      throw new UnauthorizedException('Bearer token is missing');
+    }
+
+    // Panggil service untuk melakukan operasi createPermissionAttendance dengan DTO dan token
+    return this.employeeService.permissionAttendanceHistory(
+      token_auth, // Teruskan token ke service
+      permissionAttendanceHistoryEmployeeDto,
     );
   }
 }

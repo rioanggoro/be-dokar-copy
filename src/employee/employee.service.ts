@@ -41,6 +41,7 @@ import { GetJobInformationEmployeeDto } from './dto/get_job_information-employee
 import { DebtDetailEmployeelDto } from './dto/debt_detail-employee.dto';
 import { PermissionAttendanceDetailEmployeeDto } from './dto/permission_attendance_detail-employee.dto';
 import { DebtHistoryEmployeeDto } from './dto/debt_history-employee.dto';
+import { PermissionAttendanceHistoryEmployeeDto } from './dto/permission_attendance_history-employee.dto';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -239,6 +240,7 @@ export class EmployeeService {
 
       // Simpan permission attendance
       const permissionAttendance = new PermissionAttendance();
+      permissionAttendance.date_request_permission = new Date().toISOString();
       permissionAttendance.description = description;
       permissionAttendance.department = department;
       permissionAttendance.proof_of_attendance = proof_of_attendance;
@@ -1320,7 +1322,6 @@ export class EmployeeService {
         throw error;
       }
 
-      console.error('Error detail:', error);
       throw new InternalServerErrorException('Error get job information');
     }
   }
@@ -1539,12 +1540,7 @@ export class EmployeeService {
       });
 
       if (!debtRequests || debtRequests.length === 0) {
-        return {
-          statusCode: 201,
-          status: 'success',
-          message: 'No debt history found for this employee',
-          history_debt: [],
-        };
+        throw new NotFoundException('No debt requests found');
       }
 
       // Format response
@@ -1571,6 +1567,87 @@ export class EmployeeService {
       }
 
       throw new InternalServerErrorException('Error get all history kasbon');
+    }
+  }
+
+  async permissionAttendanceHistory(
+    token_auth: string,
+    permissionAttendanceHistoryEmployeeDto: PermissionAttendanceHistoryEmployeeDto,
+  ): Promise<any> {
+    const { id_employee } = permissionAttendanceHistoryEmployeeDto;
+    try {
+      // Verifikasi token JWT
+      let decodedToken;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        decodedToken = this.jwtService.verify(token_auth); // Verifikasi token
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
+      }
+
+      // Cek apakah token valid di database
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
+        throw new NotFoundException('Token not found');
+      }
+
+      // Cari employee berdasarkan id_employee dan relasi permissionAttendance
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+        relations: ['permissionAttendances'], // Relasi dengan permissionAttendance
+      });
+
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      // Ambil history permission (kasbon) berdasarkan employee
+      const permissionAttendance =
+        await this.permissionAttendanceRepository.find({
+          where: { employee: { id_employee } },
+        });
+
+      if (!permissionAttendance || permissionAttendance.length === 0) {
+        throw new NotFoundException('No permission attendance found');
+      }
+
+      // Format response sesuai yang diminta
+      const historyPermissionAttendance = permissionAttendance.map(
+        (permission) => ({
+          data_permission_attendance: {
+            date_request_permission_attendance:
+              permission.date_request_permission,
+            status_permission_attendance: permission.status,
+          },
+        }),
+      );
+
+      return {
+        statusCode: 201,
+        status: 'success',
+        message: 'Successfully get all history permission attandance',
+        history_permission_attendance: historyPermissionAttendance,
+      };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'Error get all history permission attendance',
+      );
     }
   }
 }
