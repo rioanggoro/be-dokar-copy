@@ -1544,8 +1544,7 @@ export class EmployeeService {
         return {
           statusCode: 201,
           status: 'success',
-          message: 'No debt history found for this employee',
-          history_debt: [],
+          message: 'No debt history found for this employee'          
         };
       }
 
