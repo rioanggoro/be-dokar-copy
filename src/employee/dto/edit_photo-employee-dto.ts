@@ -5,7 +5,7 @@ export class EditPhotoEmployeeDto {
   @IsNotEmpty()
   id_employee: number;
 
-  @IsString()
   @IsNotEmpty()
+  @IsString()
   photo: string;
 }

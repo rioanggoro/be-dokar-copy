@@ -41,6 +41,9 @@ import { GetJobInformationEmployeeDto } from './dto/get_job_information-employee
 import { DebtDetailEmployeelDto } from './dto/debt_detail-employee.dto';
 import { PermissionAttendanceDetailEmployeeDto } from './dto/permission_attendance_detail-employee.dto';
 import { DebtHistoryEmployeeDto } from './dto/debt_history-employee.dto';
+import * as sharp from 'sharp';
+import * as fs from 'fs-extra';
+import { join } from 'path';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -1228,10 +1231,40 @@ export class EmployeeService {
         throw new NotFoundException('Employee not found');
       }
 
-      // Update photo di instance employee yang sudah ada
-      employee.employee_photo = photo;
+      // Hapus '/profile/' dari nama file jika ada
+      const photoFileName = photo.replace('/profile/', '');
 
-      // Simpan perubahan
+      // Path untuk gambar asli dan kompres
+      const originalPhotoPath = join(__dirname, '../../profile', photoFileName);
+      const compressedPhotoPath = join(
+        __dirname,
+        '../../profile',
+        `id_employee-${employee.id_employee}-${photoFileName}`,
+      );
+
+      // Kompres gambar menggunakan Sharp
+      await sharp(originalPhotoPath)
+        .resize(500) // Sesuaikan ukuran gambar, misalnya menjadi lebar 500px
+        .jpeg({ quality: 80 }) // Mengatur format menjadi JPEG dengan kualitas 80%
+        .toFile(compressedPhotoPath); // Simpan hasil kompresi ke path baru
+
+      // Hapus file foto asli setelah kompresi
+      if (fs.existsSync(originalPhotoPath)) {
+        await fs.remove(originalPhotoPath); // Menghapus fi
+      }
+
+      // Hapus foto lama jika ada
+      const oldPhotoPath = join(
+        __dirname,
+        '../../profile',
+        employee.employee_photo,
+      );
+      if (employee.employee_photo && fs.existsSync(oldPhotoPath)) {
+        await fs.remove(oldPhotoPath); // Menghapus file foto lama
+      }
+
+      // Update nama file di database
+      employee.employee_photo = `id_employee-${employee.id_employee}-${photoFileName}`;
       await this.employeeRepository.save(employee);
 
       return {
@@ -1247,7 +1280,7 @@ export class EmployeeService {
       ) {
         throw error;
       }
-      throw new InternalServerErrorException('Error editing employee photo');
+      throw new InternalServerErrorException('Error editing photo');
     }
   }
 
@@ -1322,7 +1355,6 @@ export class EmployeeService {
         throw error;
       }
 
-      console.error('Error detail:', error);
       throw new InternalServerErrorException('Error get job information');
     }
   }

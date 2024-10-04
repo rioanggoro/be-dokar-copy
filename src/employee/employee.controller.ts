@@ -7,6 +7,9 @@ import {
   UseFilters,
   UnauthorizedException,
   NotFoundException,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
 import { EmployeeService } from './employee.service';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
@@ -26,11 +29,14 @@ import { GetPersonalInformationEmployeeDto } from './dto/get_personal_informatio
 import { EditPersonalInformationEmployeeDto } from './dto/edit_personal_information-employee.dto';
 import { LogoutEmployeeDto } from './dto/logout-employee.dto';
 import { GetCardAssuranceEmployeeDto } from './dto/get_card-assurance-employee.dto';
-import { EditPhotoEmployeeDto } from './dto/edit_photo-employee-dto';
 import { GetJobInformationEmployeeDto } from './dto/get_job_information-employee.dto';
 import { DebtDetailEmployeelDto } from './dto/debt_detail-employee.dto';
 import { PermissionAttendanceDetailEmployeeDto } from './dto/permission_attendance_detail-employee.dto';
 import { DebtHistoryEmployeeDto } from './dto/debt_history-employee.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Express } from 'express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
 @Controller('employee')
 export class EmployeeController {
@@ -346,26 +352,50 @@ export class EmployeeController {
   @UseGuards(ThrottlerGuard)
   @Throttle(10, 60)
   @Post('/edit_photo')
+  @UseInterceptors(
+    FileInterceptor('photo', {
+      storage: diskStorage({
+        destination: './profile', // Folder tempat menyimpan file
+        filename: (req, file, cb) => {
+          // Menyimpan file dengan nama unik
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(
+            null,
+            `${file.fieldname}-${uniqueSuffix}${extname(file.originalname)}`,
+          );
+        },
+      }),
+    }),
+  )
   async editPhoto(
-    @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
-    @Body() editPhotoEmployeeDto: EditPhotoEmployeeDto,
+    @Headers('Authorization') authHeader: string, // Ambil header Authorization
+    @UploadedFile() file: Express.Multer.File, // Ambil file yang diupload
+    @Body() body: any, // Body dari request
   ): Promise<any> {
-    // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
+    // Cek apakah Authorization header ada
     if (!authHeader) {
-      throw new NotFoundException('Missing Token');
+      throw new BadRequestException('Authorization header is missing');
     }
 
-    const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization
+    // Ambil token dari Authorization header
+    const token_auth = authHeader.split(' ')[1];
 
-    if (!token_auth) {
-      throw new UnauthorizedException('Bearer token is missing');
+    // Pastikan file ada
+    if (!file) {
+      throw new BadRequestException('Photo is required');
     }
 
-    // Panggil service untuk melakukan operasi createPermissionAttendance dengan DTO dan token
-    return this.employeeService.editPhoto(
-      token_auth, // Teruskan token ke service
-      editPhotoEmployeeDto,
-    );
+    // Path tempat menyimpan file
+    const filePath = `/profile/${file.filename}`;
+
+    // Kirim path file (bukan file itu sendiri) ke service
+    const result = await this.employeeService.editPhoto(token_auth, {
+      ...body, // Gabungkan data dari body
+      photo: filePath, // Sertakan path foto yang di-upload
+    });
+
+    return result;
   }
 
   @UseFilters(HttpExceptionFilter)
