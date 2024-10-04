@@ -23,9 +23,6 @@ export class DailyAttendance {
   @Column({ type: 'double precision' })
   meal_money: number;
 
-  // @Column({ type: 'character varying', length: 1 })
-  // overtime_total: string;
-
   @Column({ type: 'date' })
   created_at: Date;
 
@@ -35,7 +32,7 @@ export class DailyAttendance {
   @Column({ type: 'double precision' })
   half_day: number;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'double precision' })
   overtime_total_hour: number;
 
   @OneToOne(() => ClockIn, (clockIn) => clockIn.dailyAttendance)
