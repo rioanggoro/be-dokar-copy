@@ -1234,48 +1234,45 @@ export class EmployeeService {
       // Hapus '/uploads/' dari nama file jika ada
       const photoFileName = photo.replace('/uploads/', '');
 
-      // Path lama dan baru untuk gambar
+      // Path untuk gambar asli dan kompres
+      const originalPhotoPath = join(__dirname, '../../uploads', photoFileName);
+      const compressedPhotoPath = join(
+        __dirname,
+        '../../uploads',
+        `id_employee-${employee.id_employee}-${photoFileName}`,
+      );
+
+      // Kompres gambar menggunakan Sharp
+      await sharp(originalPhotoPath)
+        .resize(500) // Sesuaikan ukuran gambar, misalnya menjadi lebar 500px
+        .jpeg({ quality: 80 }) // Mengatur format menjadi JPEG dengan kualitas 80%
+        .toFile(compressedPhotoPath); // Simpan hasil kompresi ke path baru
+
+      // Hapus file foto asli setelah kompresi
+      if (fs.existsSync(originalPhotoPath)) {
+        await fs.remove(originalPhotoPath); // Menghapus fi
+      }
+
+      // Hapus foto lama jika ada
       const oldPhotoPath = join(
         __dirname,
         '../../uploads',
         employee.employee_photo,
       );
-      const compressedPhotoPath = join(
-        __dirname,
-        '../../uploads',
-        `compressed-${photoFileName}`,
-      );
-
-      // Logging untuk membantu debugging
-      console.log('Photo name received:', photoFileName);
-      console.log('Old photo path:', oldPhotoPath);
-      console.log('New compressed photo path:', compressedPhotoPath);
-
-      // Kompres gambar menggunakan Sharp
-      await sharp(join(__dirname, '../../uploads', photoFileName))
-        .resize(500) // Sesuaikan ukuran gambar, misalnya menjadi lebar 500px
-        .jpeg({ quality: 80 }) // Mengatur format menjadi JPEG dengan kualitas 80%
-        .toFile(compressedPhotoPath); // Simpan hasil kompresi ke path baru
-
-      // Hapus foto lama jika ada
       if (employee.employee_photo && fs.existsSync(oldPhotoPath)) {
         await fs.remove(oldPhotoPath); // Menghapus file foto lama
-        console.log('Old photo removed:', oldPhotoPath);
-      } else {
-        console.log('No old photo found to delete.');
       }
 
       // Update nama file di database
-      employee.employee_photo = `compressed-${photoFileName}`;
+      employee.employee_photo = `id_employee-${employee.id_employee}-${photoFileName}`;
       await this.employeeRepository.save(employee);
 
       return {
         statusCode: 201,
         status: 'success',
-        message: 'Successfully edit photo',
+        message: 'Successfully edited photo',
       };
     } catch (error) {
-      console.error('Error caught during editPhoto process:', error);
       if (
         error instanceof BadRequestException ||
         error instanceof NotFoundException ||
@@ -1283,7 +1280,7 @@ export class EmployeeService {
       ) {
         throw error;
       }
-      throw new InternalServerErrorException('Error edit photo');
+      throw new InternalServerErrorException('Error editing photo');
     }
   }
 
@@ -1358,7 +1355,6 @@ export class EmployeeService {
         throw error;
       }
 
-      console.error('Error detail:', error);
       throw new InternalServerErrorException('Error get job information');
     }
   }
