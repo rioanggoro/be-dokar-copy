@@ -1231,14 +1231,14 @@ export class EmployeeService {
         throw new NotFoundException('Employee not found');
       }
 
-      // Hapus '/uploads/' dari nama file jika ada
-      const photoFileName = photo.replace('/uploads/', '');
+      // Hapus '/profile/' dari nama file jika ada
+      const photoFileName = photo.replace('/profile/', '');
 
       // Path untuk gambar asli dan kompres
-      const originalPhotoPath = join(__dirname, '../../uploads', photoFileName);
+      const originalPhotoPath = join(__dirname, '../../profile', photoFileName);
       const compressedPhotoPath = join(
         __dirname,
-        '../../uploads',
+        '../../profile',
         `id_employee-${employee.id_employee}-${photoFileName}`,
       );
 
@@ -1256,7 +1256,7 @@ export class EmployeeService {
       // Hapus foto lama jika ada
       const oldPhotoPath = join(
         __dirname,
-        '../../uploads',
+        '../../profile',
         employee.employee_photo,
       );
       if (employee.employee_photo && fs.existsSync(oldPhotoPath)) {
