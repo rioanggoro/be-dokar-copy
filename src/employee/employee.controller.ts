@@ -352,12 +352,11 @@ export class EmployeeController {
   @UseFilters(HttpExceptionFilter)
   @UseGuards(ThrottlerGuard)
   @Throttle(10, 60)
-  @Throttle(10, 60)
   @Post('/edit_photo')
   @UseInterceptors(
     FileInterceptor('photo', {
       storage: diskStorage({
-        destination: './uploads', // Folder tempat menyimpan file
+        destination: './profile', // Folder tempat menyimpan file
         filename: (req, file, cb) => {
           // Menyimpan file dengan nama unik
           const uniqueSuffix =
@@ -389,7 +388,7 @@ export class EmployeeController {
     }
 
     // Path tempat menyimpan file
-    const filePath = `/uploads/${file.filename}`;
+    const filePath = `/profile/${file.filename}`;
 
     // Kirim path file (bukan file itu sendiri) ke service
     const result = await this.employeeService.editPhoto(token_auth, {
