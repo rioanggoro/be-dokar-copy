@@ -371,10 +371,16 @@ export class EmployeeController {
     }),
   )
   async editPhoto(
-    @Headers('Authorization') authHeader: string,
-    @UploadedFile() file: Express.Multer.File,
-    @Body() body: any,
+    @Headers('Authorization') authHeader: string, // Ambil header Authorization
+    @UploadedFile() file: Express.Multer.File, // Ambil file yang diupload
+    @Body() body: any, // Body dari request
   ): Promise<any> {
+    // Cek apakah Authorization header ada
+    if (!authHeader) {
+      throw new BadRequestException('Authorization header is missing');
+    }
+
+    // Ambil token dari Authorization header
     const token_auth = authHeader.split(' ')[1];
 
     // Pastikan file ada
@@ -382,13 +388,13 @@ export class EmployeeController {
       throw new BadRequestException('Photo is required');
     }
 
-    // Simpan path file di sini
+    // Path tempat menyimpan file
     const filePath = `/uploads/${file.filename}`;
 
     // Kirim path file (bukan file itu sendiri) ke service
     const result = await this.employeeService.editPhoto(token_auth, {
-      ...body,
-      photo: filePath,
+      ...body, // Gabungkan data dari body
+      photo: filePath, // Sertakan path foto yang di-upload
     });
 
     return result;
