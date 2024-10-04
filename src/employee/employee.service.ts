@@ -41,6 +41,9 @@ import { GetJobInformationEmployeeDto } from './dto/get_job_information-employee
 import { DebtDetailEmployeelDto } from './dto/debt_detail-employee.dto';
 import { PermissionAttendanceDetailEmployeeDto } from './dto/permission_attendance_detail-employee.dto';
 import { DebtHistoryEmployeeDto } from './dto/debt_history-employee.dto';
+import * as sharp from 'sharp';
+import * as fs from 'fs-extra';
+import { join } from 'path';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -1228,16 +1231,51 @@ export class EmployeeService {
         throw new NotFoundException('Employee not found');
       }
 
-      // Simpan perubahan
-      employee.employee_photo = photo;
+      // Hapus '/uploads/' dari nama file jika ada
+      const photoFileName = photo.replace('/uploads/', '');
+
+      // Path lama dan baru untuk gambar
+      const oldPhotoPath = join(
+        __dirname,
+        '../../uploads',
+        employee.employee_photo,
+      );
+      const compressedPhotoPath = join(
+        __dirname,
+        '../../uploads',
+        `compressed-${photoFileName}`,
+      );
+
+      // Logging untuk membantu debugging
+      console.log('Photo name received:', photoFileName);
+      console.log('Old photo path:', oldPhotoPath);
+      console.log('New compressed photo path:', compressedPhotoPath);
+
+      // Kompres gambar menggunakan Sharp
+      await sharp(join(__dirname, '../../uploads', photoFileName))
+        .resize(500) // Sesuaikan ukuran gambar, misalnya menjadi lebar 500px
+        .jpeg({ quality: 80 }) // Mengatur format menjadi JPEG dengan kualitas 80%
+        .toFile(compressedPhotoPath); // Simpan hasil kompresi ke path baru
+
+      // Hapus foto lama jika ada
+      if (employee.employee_photo && fs.existsSync(oldPhotoPath)) {
+        await fs.remove(oldPhotoPath); // Menghapus file foto lama
+        console.log('Old photo removed:', oldPhotoPath);
+      } else {
+        console.log('No old photo found to delete.');
+      }
+
+      // Update nama file di database
+      employee.employee_photo = `compressed-${photoFileName}`;
       await this.employeeRepository.save(employee);
 
       return {
         statusCode: 201,
         status: 'success',
-        message: 'Successfully edited photo',
+        message: 'Successfully edit photo',
       };
     } catch (error) {
+      console.error('Error caught during editPhoto process:', error);
       if (
         error instanceof BadRequestException ||
         error instanceof NotFoundException ||
@@ -1245,7 +1283,7 @@ export class EmployeeService {
       ) {
         throw error;
       }
-      throw new InternalServerErrorException('Error editing employee photo');
+      throw new InternalServerErrorException('Error edit photo');
     }
   }
 
