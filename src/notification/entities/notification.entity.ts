@@ -26,7 +26,7 @@ export class Notification {
   @Column({ type: 'character varying', length: 50 })
   status: string;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: 'date' })
   notification_date: Date;
 
   @Column({ type: 'text' })

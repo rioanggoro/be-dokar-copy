@@ -44,6 +44,9 @@ import { DebtHistoryEmployeeDto } from './dto/debt_history-employee.dto';
 import { PermissionAttendanceHistoryEmployeeDto } from './dto/permission_attendance_history-employee.dto';
 import { NotificationEmployeeDto } from './dto/notification-employee.dto';
 import { Notification } from 'src/notification/entities/notification.entity';
+import * as sharp from 'sharp';
+import * as fs from 'fs-extra';
+import { join } from 'path';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -1234,8 +1237,40 @@ export class EmployeeService {
         throw new NotFoundException('Employee not found');
       }
 
-      // Simpan perubahan
-      employee.employee_photo = photo;
+      // Hapus '/profile/' dari nama file jika ada
+      const photoFileName = photo.replace('/profile/', '');
+
+      // Path untuk gambar asli dan kompres
+      const originalPhotoPath = join(__dirname, '../../profile', photoFileName);
+      const compressedPhotoPath = join(
+        __dirname,
+        '../../profile',
+        `id_employee-${employee.id_employee}-${photoFileName}`,
+      );
+
+      // Kompres gambar menggunakan Sharp
+      await sharp(originalPhotoPath)
+        .resize(500) // Sesuaikan ukuran gambar, misalnya menjadi lebar 500px
+        .jpeg({ quality: 80 }) // Mengatur format menjadi JPEG dengan kualitas 80%
+        .toFile(compressedPhotoPath); // Simpan hasil kompresi ke path baru
+
+      // Hapus file foto asli setelah kompresi
+      if (fs.existsSync(originalPhotoPath)) {
+        await fs.remove(originalPhotoPath); // Menghapus fi
+      }
+
+      // Hapus foto lama jika ada
+      const oldPhotoPath = join(
+        __dirname,
+        '../../profile',
+        employee.employee_photo,
+      );
+      if (employee.employee_photo && fs.existsSync(oldPhotoPath)) {
+        await fs.remove(oldPhotoPath); // Menghapus file foto lama
+      }
+
+      // Update nama file di database
+      employee.employee_photo = `id_employee-${employee.id_employee}-${photoFileName}`;
       await this.employeeRepository.save(employee);
 
       return {
@@ -1251,7 +1286,7 @@ export class EmployeeService {
       ) {
         throw error;
       }
-      throw new InternalServerErrorException('Error editing employee photo');
+      throw new InternalServerErrorException('Error editing photo');
     }
   }
 
@@ -1583,7 +1618,6 @@ export class EmployeeService {
       // Verifikasi token JWT
       let decodedToken;
       try {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         decodedToken = this.jwtService.verify(token_auth); // Verifikasi token
       } catch (error) {
         if (error.name === 'JsonWebTokenError') {
@@ -1624,13 +1658,28 @@ export class EmployeeService {
         throw new NotFoundException('No permission attendance found');
       }
 
-      // Format response sesuai yang diminta
+      // Function untuk menghitung jumlah hari kerja
+      const calculateWorkingDays = (startDate: Date, endDate: Date) => {
+        if (!startDate || !endDate) return 0; // Jika salah satu tanggal kosong
+
+        const oneDay = 24 * 60 * 60 * 1000; // Jumlah milidetik dalam satu hari
+        const diffDays = Math.round(
+          Math.abs((endDate.getTime() - startDate.getTime()) / oneDay),
+        );
+        return diffDays;
+      };
+
+      // Format response sesuai yang diminta dan hitung total hari kerja
       const historyPermissionAttendance = permissionAttendance.map(
         (permission) => ({
           data_permission_attendance: {
             date_request_permission_attendance:
               permission.date_request_permission,
             status_permission_attendance: permission.status,
+            total_working_days: calculateWorkingDays(
+              new Date(permission.date_start),
+              new Date(permission.date_finish),
+            ), // Hitung total hari kerja
           },
         }),
       );
@@ -1638,7 +1687,7 @@ export class EmployeeService {
       return {
         statusCode: 201,
         status: 'success',
-        message: 'Successfully get all history permission attandance',
+        message: 'Successfully get all history permission attendance',
         history_permission_attendance: historyPermissionAttendance,
       };
     } catch (error) {
