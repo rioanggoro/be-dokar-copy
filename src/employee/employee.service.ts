@@ -464,7 +464,6 @@ export class EmployeeService {
       // Verifikasi token (memeriksa apakah token valid secara kriptografis)
       let decodedToken;
       try {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
       } catch (error) {
         if (error.name === 'JsonWebTokenError') {
@@ -515,12 +514,47 @@ export class EmployeeService {
         );
       }
 
+      // Hapus '/clockin/' dari nama file jika ada
+      const photoFileName = photo.replace('/clockin/', '');
+
+      // Path untuk gambar asli dan kompres
+      const originalPhotoPath = join(__dirname, '../../clockin', photoFileName);
+      const compressedPhotoPath = join(
+        __dirname,
+        '../../clockin',
+        `id_employee-${employee.id_employee}-${photoFileName}`,
+      );
+
+      // Kompres gambar menggunakan Sharp
+      await sharp(originalPhotoPath)
+        .resize(500) // Sesuaikan ukuran gambar, misalnya menjadi lebar 500px
+        .jpeg({ quality: 80 }) // Mengatur format menjadi JPEG dengan kualitas 80%
+        .toFile(compressedPhotoPath); // Simpan hasil kompresi ke path baru
+
+      // Hapus file foto asli setelah kompresi
+      if (fs.existsSync(originalPhotoPath)) {
+        await fs.remove(originalPhotoPath); // Menghapus file asli setelah kompresi
+      }
+      // Hapus foto lama jika ada
+      const oldPhotoPath = join(
+        __dirname,
+        '../../profile',
+        employee.employee_photo,
+      );
+      if (employee.employee_photo && fs.existsSync(oldPhotoPath)) {
+        await fs.remove(oldPhotoPath); // Menghapus file foto lama
+      }
+
+      // Update nama file di database
+      employee.employee_photo = `id_employee-${employee.id_employee}-${photoFileName}`;
+      await this.employeeRepository.save(employee);
+
       // Simpan clock-in jika jarak dalam radius
       const clockIn = new ClockIn();
       clockIn.address = address;
       clockIn.latitude = latitude;
       clockIn.longitude = longitude;
-      clockIn.attendance_photo = photo;
+      clockIn.attendance_photo = `id_employee-${employee.id_employee}-${photoFileName}`;
       clockIn.created_at = date;
       clockIn.time = time;
       clockIn.employee = employee;
@@ -530,7 +564,7 @@ export class EmployeeService {
       return {
         statusCode: 201,
         status: 'success',
-        message: 'Successfully clock in',
+        message: 'Successfully clocked in',
       };
     } catch (error) {
       if (
@@ -540,7 +574,7 @@ export class EmployeeService {
       ) {
         throw error;
       }
-      throw new InternalServerErrorException('Error clock in');
+      throw new InternalServerErrorException('Error clocking in');
     }
   }
 
