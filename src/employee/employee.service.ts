@@ -464,6 +464,7 @@ export class EmployeeService {
       // Verifikasi token (memeriksa apakah token valid secara kriptografis)
       let decodedToken;
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
       } catch (error) {
         if (error.name === 'JsonWebTokenError') {

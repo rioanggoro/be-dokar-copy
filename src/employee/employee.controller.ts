@@ -20,7 +20,6 @@ import { SendOtpEmployeeDto } from './dto/sendotp-employee.dto';
 import { VerifyOtpEmployeeDto } from './dto/verifyotp-employee.dto';
 import { ChangePasswordEmployeeDto } from './dto/change_password-employee.dto';
 import { PermissionAttendanceEmployeeDto } from './dto/permission_attendance-employee.dto';
-import { CreateClockInDto } from './dto/clock_in-employee.dto';
 import { CreateClockOutDto } from './dto/clock_out-employee.dto';
 import { DebtRequestEmployeeDto } from './dto/debt_request-employee.dto';
 import { GetGeneralInformationEmployeeDto } from './dto/get_general_information-employee.dto';
