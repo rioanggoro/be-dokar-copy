@@ -168,27 +168,51 @@ export class EmployeeController {
   @UseGuards(ThrottlerGuard)
   @Throttle(10, 60)
   @UseFilters(HttpExceptionFilter)
-  @Post('clockout')
+  @Post('/clockout')
+  @UseInterceptors(
+    FileInterceptor('photo', {
+      storage: diskStorage({
+        destination: './clockout', // Folder tempat menyimpan file clock-in
+        filename: (req, file, cb) => {
+          // Menyimpan file dengan nama unik
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(
+            null,
+            `${file.fieldname}-${uniqueSuffix}${extname(file.originalname)}`,
+          );
+        },
+      }),
+    }),
+  )
   async createClockOut(
-    @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
-    @Body() createClockOutDto: CreateClockOutDto,
+    @Headers('Authorization') authHeader: string, // Ambil header Authorization
+    @UploadedFile() file: Express.Multer.File, // Ambil file yang diupload
+    @Body() body: any, // Body dari request
   ): Promise<any> {
-    // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
+    // Cek apakah Authorization header ada
     if (!authHeader) {
-      throw new NotFoundException('Missing Token');
+      throw new BadRequestException('Authorization header is missing');
     }
 
-    const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization
+    // Ambil token dari Authorization header
+    const token_auth = authHeader.split(' ')[1];
 
-    if (!token_auth) {
-      throw new UnauthorizedException('Bearer token is missing');
+    // Pastikan file ada
+    if (!file) {
+      throw new BadRequestException('Photo is required');
     }
 
-    // Panggil service untuk melakukan operasi createClockIn dengan DTO dan token
-    return this.employeeService.createClockOut(
-      token_auth, // Teruskan token ke service
-      createClockOutDto,
-    );
+    // Path tempat menyimpan file
+    const filePath = `/clockout/${file.filename}`;
+
+    // Kirim path file (bukan file itu sendiri) ke service
+    const result = await this.employeeService.createClockOut(token_auth, {
+      ...body, // Gabungkan data dari body
+      photo: filePath, // Sertakan path foto yang di-upload
+    });
+
+    return result;
   }
 
   @UseGuards(ThrottlerGuard)

@@ -536,15 +536,6 @@ export class EmployeeService {
       if (fs.existsSync(originalPhotoPath)) {
         await fs.remove(originalPhotoPath); // Menghapus file asli setelah kompresi
       }
-      // Hapus foto lama jika ada
-      const oldPhotoPath = join(
-        __dirname,
-        '../../profile',
-        employee.employee_photo,
-      );
-      if (employee.employee_photo && fs.existsSync(oldPhotoPath)) {
-        await fs.remove(oldPhotoPath); // Menghapus file foto lama
-      }
 
       // Update nama file di database
       employee.employee_photo = `id_employee-${employee.id_employee}-${photoFileName}`;
@@ -626,7 +617,7 @@ export class EmployeeService {
         throw new NotFoundException('Company not found for this employee');
       }
 
-      // Hitung jarak antara lokasi clock-out dan lokasi perusahaan
+      // Hitung jarak antara lokasi clock-in dan lokasi perusahaan
       const distance = calculateDistance(
         company.latitude,
         company.longitude,
@@ -641,22 +632,52 @@ export class EmployeeService {
         );
       }
 
-      // Simpan clock-out jika jarak dalam radius
+      // Hapus '/clockin/' dari nama file jika ada
+      const photoFileName = photo.replace('/clockout/', '');
+
+      // Path untuk gambar asli dan kompres
+      const originalPhotoPath = join(
+        __dirname,
+        '../../clockout',
+        photoFileName,
+      );
+      const compressedPhotoPath = join(
+        __dirname,
+        '../../clockout',
+        `id_employee-${employee.id_employee}-${photoFileName}`,
+      );
+
+      // Kompres gambar menggunakan Sharp
+      await sharp(originalPhotoPath)
+        .resize(500) // Sesuaikan ukuran gambar, misalnya menjadi lebar 500px
+        .jpeg({ quality: 80 }) // Mengatur format menjadi JPEG dengan kualitas 80%
+        .toFile(compressedPhotoPath); // Simpan hasil kompresi ke path baru
+
+      // Hapus file foto asli setelah kompresi
+      if (fs.existsSync(originalPhotoPath)) {
+        await fs.remove(originalPhotoPath); // Menghapus file asli setelah kompresi
+      }
+
+      // Update nama file di database
+      employee.employee_photo = `id_employee-${employee.id_employee}-${photoFileName}`;
+      await this.employeeRepository.save(employee);
+
+      // Simpan clock-in jika jarak dalam radius
       const clockOut = new ClockOut();
       clockOut.address = address;
       clockOut.latitude = latitude;
       clockOut.longitude = longitude;
-      clockOut.attendance_photo = photo;
+      clockOut.attendance_photo = `id_employee-${employee.id_employee}-${photoFileName}`;
       clockOut.created_at = date;
       clockOut.time = time;
       clockOut.employee = employee;
 
-      await this.clockOutRepository.save(clockOut);
+      await this.clockInRepository.save(clockOut);
 
       return {
         statusCode: 201,
         status: 'success',
-        message: 'Successfully clock out',
+        message: 'Successfully clocked out',
       };
     } catch (error) {
       if (
@@ -666,7 +687,7 @@ export class EmployeeService {
       ) {
         throw error;
       }
-      throw new InternalServerErrorException('Error clock out');
+      throw new InternalServerErrorException('Error clocking out');
     }
   }
 
