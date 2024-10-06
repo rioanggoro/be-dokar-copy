@@ -216,7 +216,6 @@ export class EmployeeService {
       // Verifikasi token (memeriksa apakah token valid secara kriptografis)
       let decodedToken;
       try {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
       } catch (error) {
         if (error.name === 'JsonWebTokenError') {
@@ -245,16 +244,49 @@ export class EmployeeService {
         throw new NotFoundException('Employee not found');
       }
 
-      // Simpan permission attendance
+      // Hapus '/permission_attendance/' dari nama file jika ada
+      const photoFileName = proof_of_attendance.replace(
+        '/permission_attendance/',
+        '',
+      );
+
+      // Path untuk gambar asli dan kompres
+      const originalPhotoPath = join(
+        __dirname,
+        '../../permission_attendance',
+        photoFileName,
+      );
+      const compressedPhotoFileName = `id_employee-${employee.id_employee}-${photoFileName}`;
+      const compressedPhotoPath = join(
+        __dirname,
+        '../../permission_attendance',
+        compressedPhotoFileName,
+      );
+
+      // Kompres gambar menggunakan Sharp
+      await sharp(originalPhotoPath)
+        .resize(500) // Sesuaikan ukuran gambar, misalnya menjadi lebar 500px
+        .jpeg({ quality: 80 }) // Mengatur format menjadi JPEG dengan kualitas 80%
+        .toFile(compressedPhotoPath); // Simpan hasil kompresi ke path baru
+
+      // Hapus file foto asli setelah kompresi
+      if (fs.existsSync(originalPhotoPath)) {
+        await fs.remove(originalPhotoPath); // Menghapus file asli setelah kompresi
+      }
+
+      // Simpan permission attendance hanya dengan file kompresi
       const permissionAttendance = new PermissionAttendance();
       permissionAttendance.date_request_permission = new Date().toISOString();
       permissionAttendance.description = description;
       permissionAttendance.department = department;
-      permissionAttendance.proof_of_attendance = proof_of_attendance;
+
+      // Simpan nama file kompresi sebagai proof_of_attendance
+      permissionAttendance.proof_of_attendance = compressedPhotoFileName;
       permissionAttendance.employee = employee;
       permissionAttendance.status = 'Request';
 
       await this.permissionAttendanceRepository.save(permissionAttendance);
+
       return {
         statusCode: 201,
         status: 'success',
@@ -269,10 +301,11 @@ export class EmployeeService {
         throw error;
       }
       throw new InternalServerErrorException(
-        'Error sent permission attendance',
+        'Error sending permission attendance',
       );
     }
   }
+
   async sendOTP(
     employeesendotpdto: SendOtpEmployeeDto,
   ): Promise<{ statusCode: number; status: string; message: string }> {
