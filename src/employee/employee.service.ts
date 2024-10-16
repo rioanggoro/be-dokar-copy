@@ -696,7 +696,7 @@ export class EmployeeService {
       dailyAttendance.clockIn = clockIn; // Simpan clockIn dengan waktu 'H'
       dailyAttendance.employee = employee;
       dailyAttendance.attend_status = 'H';
-      dailyAttendance.half_day = 0.5;
+      // dailyAttendance.half_day = 0.5;
 
       // Simpan record ke tabel daily_attendance
       await this.dailyAttendanceRepository.save(dailyAttendance);
