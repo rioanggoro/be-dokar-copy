@@ -1,5 +1,3 @@
-//Entity untuk merelasikan tabel tabel
-
 import {
   Entity,
   Column,
@@ -8,6 +6,8 @@ import {
   OneToOne,
   ManyToOne,
   OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Company } from 'src/company/entities/company.entity';
 import { GeneralInformation } from 'src/general_inforamtion/entities/general_inforamtion.entity';
@@ -18,6 +18,10 @@ import { ClockOut } from 'src/clockout/entities/clockout.entity';
 import { DebtRequest } from 'src/debt_request/entities/debt_request.entity';
 import { PersonalInformation } from 'src/personal_information/entities/personal_information.entity';
 import { Notification } from 'src/notification/entities/notification.entity';
+import { DailyAttendance } from 'src/daily_attendance/entities/daily_attendance.entity';
+import { MonthlyAttendance } from 'src/monthly_attendance/entities/monthly_attendance.entity';
+import { AttendanceSetting } from 'src/attendancesettings/entities/attendancesetting.entity';
+import { PaySlip } from 'src/pay_slip/entities/pay-slip.entity';
 
 @Entity('employee')
 export class Employee {
@@ -88,4 +92,33 @@ export class Employee {
   // Relasi ke Notification
   @OneToMany(() => Notification, (notification) => notification.employee)
   notifications: Notification[];
+
+  @OneToOne(
+    () => DailyAttendance,
+    (dailyAttendance) => dailyAttendance.employee,
+  )
+  dailyAttendance: DailyAttendance;
+
+  @OneToOne(
+    () => MonthlyAttendance,
+    (monthlyAttendance) => monthlyAttendance.employee,
+  )
+  monthlyAttendance: MonthlyAttendance;
+
+  @OneToOne(() => PaySlip, (paySlip) => paySlip.employee)
+  paySlip: PaySlip;
+
+  @OneToOne(
+    () => AttendanceSetting,
+    (attendanceSetting) => attendanceSetting.employee,
+  )
+  attendanceSetting: AttendanceSetting;
+
+  // Kolom created_at yang otomatis diisi saat record baru ditambahkan
+  @CreateDateColumn({ type: 'timestamp' })
+  created_at: Date;
+
+  // Kolom updated_at yang otomatis diupdate saat record diubah
+  @UpdateDateColumn({ type: 'timestamp' })
+  updated_at: Date;
 }

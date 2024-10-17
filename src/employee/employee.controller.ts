@@ -19,8 +19,6 @@ import { HttpExceptionFilter } from 'src/shared/filters/exception.filter';
 import { SendOtpEmployeeDto } from './dto/sendotp-employee.dto';
 import { VerifyOtpEmployeeDto } from './dto/verifyotp-employee.dto';
 import { ChangePasswordEmployeeDto } from './dto/change_password-employee.dto';
-import { PermissionAttendanceEmployeeDto } from './dto/permission_attendance-employee.dto';
-import { CreateClockOutDto } from './dto/clock_out-employee.dto';
 import { DebtRequestEmployeeDto } from './dto/debt_request-employee.dto';
 import { GetGeneralInformationEmployeeDto } from './dto/get_general_information-employee.dto';
 import { EditGeneralInformationEmployeeDto } from './dto/edit_general_information-employee.dto';
@@ -38,6 +36,8 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { PermissionAttendanceHistoryEmployeeDto } from './dto/permission_attendance_history-employee.dto';
 import { NotificationEmployeeDto } from './dto/notification-employee.dto';
+import { MonthAttendanceEmployeeDto } from './dto/month_attendance-employee.dto';
+import { PaySlipEmployeeDto } from './dto/pay_slip-employee.dto';
 
 @Controller('employee')
 export class EmployeeController {
@@ -630,6 +630,58 @@ export class EmployeeController {
     return this.employeeService.notification(
       token_auth, // Teruskan token ke service
       notificationEmployeeDto,
+    );
+  }
+
+  @UseFilters(HttpExceptionFilter)
+  @UseGuards(ThrottlerGuard)
+  @Throttle(10, 60)
+  @Post('month-attendance')
+  async monthAttendance(
+    @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
+    @Body()
+    monthAttendanceEmployeeDto: MonthAttendanceEmployeeDto,
+  ): Promise<any> {
+    // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
+    if (!authHeader) {
+      throw new NotFoundException('Missing Token');
+    }
+
+    const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization
+
+    if (!token_auth) {
+      throw new UnauthorizedException('Bearer token is missing');
+    }
+
+    return this.employeeService.monthAttendance(
+      token_auth, // Teruskan token ke service
+      monthAttendanceEmployeeDto,
+    );
+  }
+
+  @UseFilters(HttpExceptionFilter)
+  @UseGuards(ThrottlerGuard)
+  @Throttle(10, 60)
+  @Post('pay-slip')
+  async paySlip(
+    @Headers('Authorization') authHeader: string, // Ambil Bearer Token dari header
+    @Body()
+    paySlipEmployeeDto: PaySlipEmployeeDto,
+  ): Promise<any> {
+    // Tambahkan pengecekan untuk memastikan authHeader tidak undefined
+    if (!authHeader) {
+      throw new NotFoundException('Missing Token');
+    }
+
+    const token_auth = authHeader.split(' ')[1]; // Ekstrak token dari header Authorization
+
+    if (!token_auth) {
+      throw new UnauthorizedException('Bearer token is missing');
+    }
+
+    return this.employeeService.paySlip(
+      token_auth, // Teruskan token ke service
+      paySlipEmployeeDto,
     );
   }
 }

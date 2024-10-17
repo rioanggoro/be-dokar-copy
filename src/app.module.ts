@@ -14,6 +14,10 @@ import { ClockoutModule } from './clockout/clockout.module';
 import { DebtRequestModule } from './debt_request/debt_request.module';
 import { PersonalInformationModule } from './personal_information/personal_information.module';
 import { NotificationModule } from './notification/notification.module';
+import { DailyAttendanceModule } from './daily_attendance/daily_attendance.module';
+import { MonthlyAttendanceModule } from './monthly_attendance/monthly_attendance.module';
+import { AttendancesettingsModule } from './attendancesettings/attendancesettings.module';
+import { PaySlip } from './pay_slip/entities/pay-slip.entity';
 
 @Module({
   imports: [
@@ -30,6 +34,7 @@ import { NotificationModule } from './notification/notification.module';
         database: configService.get('DB_NAME'),
         entities: [join(process.cwd(), 'dist/**/*.entity.js')],
         synchronize: false, // Set true in development to auto-sync schema
+        ssl: false,
       }),
     }),
     EmployeeModule,
@@ -42,6 +47,10 @@ import { NotificationModule } from './notification/notification.module';
     DebtRequestModule,
     PersonalInformationModule,
     NotificationModule,
+    DailyAttendanceModule,
+    MonthlyAttendanceModule,
+    AttendancesettingsModule,
+    PaySlip,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -4,8 +4,10 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   JoinColumn,
+  OneToOne,
 } from 'typeorm';
 import { Employee } from 'src/employee/entities/employee.entity';
+import { DailyAttendance } from 'src/daily_attendance/entities/daily_attendance.entity';
 
 @Entity()
 export class ClockOut {
@@ -25,7 +27,7 @@ export class ClockOut {
   attendance_photo: string;
 
   @Column({ type: 'date' })
-  created_at: string;
+  created_at: Date;
 
   @Column({ type: 'time with time zone' })
   time: string;
@@ -33,4 +35,10 @@ export class ClockOut {
   @ManyToOne(() => Employee, (employee) => employee.clockouts)
   @JoinColumn({ name: 'employee_id' })
   employee: Employee;
+
+  @OneToOne(
+    () => DailyAttendance,
+    (dailyAttendance) => dailyAttendance.clockOut,
+  )
+  dailyAttendance: DailyAttendance[];
 }

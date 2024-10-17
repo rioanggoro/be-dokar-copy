@@ -16,6 +16,11 @@ import { ClockOut } from 'src/clockout/entities/clockout.entity';
 import { DebtRequest } from 'src/debt_request/entities/debt_request.entity';
 import { PersonalInformation } from 'src/personal_information/entities/personal_information.entity';
 import { Notification } from 'src/notification/entities/notification.entity';
+import { DailyAttendance } from 'src/daily_attendance/entities/daily_attendance.entity';
+
+import { MonthlyAttendance } from 'src/monthly_attendance/entities/monthly_attendance.entity';
+import { AttendanceSetting } from 'src/attendancesettings/entities/attendancesetting.entity';
+import { PaySlip } from 'src/pay_slip/entities/pay-slip.entity';
 
 @Module({
   imports: [
@@ -31,6 +36,10 @@ import { Notification } from 'src/notification/entities/notification.entity';
       ClockOut,
       DebtRequest,
       Notification,
+      DailyAttendance,
+      MonthlyAttendance,
+      AttendanceSetting,
+      PaySlip,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

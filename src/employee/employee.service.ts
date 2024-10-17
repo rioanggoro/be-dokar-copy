@@ -46,7 +46,14 @@ import { NotificationEmployeeDto } from './dto/notification-employee.dto';
 import { Notification } from 'src/notification/entities/notification.entity';
 import * as sharp from 'sharp';
 import * as fs from 'fs-extra';
+import { DailyAttendance } from 'src/daily_attendance/entities/daily_attendance.entity';
+import { Between } from 'typeorm';
 import { join } from 'path';
+import { MonthAttendanceEmployeeDto } from './dto/month_attendance-employee.dto';
+import { MonthlyAttendance } from 'src/monthly_attendance/entities/monthly_attendance.entity';
+import { AttendanceSetting } from 'src/attendancesettings/entities/attendancesetting.entity';
+import { PaySlip } from 'src/pay_slip/entities/pay-slip.entity';
+import { PaySlipEmployeeDto } from './dto/pay_slip-employee.dto';
 
 @Injectable()
 @UseFilters(HttpExceptionFilter)
@@ -58,24 +65,45 @@ export class EmployeeService {
   constructor(
     @InjectRepository(Employee)
     private employeeRepository: Repository<Employee>,
+
     @InjectRepository(GeneralInformation)
     private generalInformationRepository: Repository<GeneralInformation>,
+
     @InjectRepository(Company)
     private companyRepository: Repository<Company>,
+
     @InjectRepository(PermissionAttendance)
     private permissionAttendanceRepository: Repository<PermissionAttendance>,
+
     @InjectRepository(ClockIn)
     private clockInRepository: Repository<ClockIn>,
+
     @InjectRepository(ClockOut)
     private clockOutRepository: Repository<ClockOut>,
+
     @InjectRepository(DebtRequest)
     private debtRequestRepository: Repository<DebtRequest>,
+
     @InjectRepository(PersonalInformation)
     private personalInformationRepository: Repository<PersonalInformation>,
+
     @InjectRepository(Notification)
     private notificationRepository: Repository<Notification>,
 
-    private jwtService: JwtService,
+    // Tambahkan repository DailyAttendance
+    @InjectRepository(DailyAttendance)
+    private dailyAttendanceRepository: Repository<DailyAttendance>,
+
+    @InjectRepository(MonthlyAttendance)
+    private monthlyAttendanceRepository: Repository<MonthlyAttendance>,
+
+    @InjectRepository(AttendanceSetting)
+    private attendanceSettingsRepository: Repository<AttendanceSetting>,
+
+    @InjectRepository(PaySlip)
+    private paySlipRepository: Repository<PaySlip>,
+
+    private jwtService: JwtService, // JWT Service untuk validasi token
   ) {}
 
   async registerEmployee(
@@ -273,7 +301,7 @@ export class EmployeeService {
       if (fs.existsSync(originalPhotoPath)) {
         await fs.remove(originalPhotoPath); // Menghapus file asli setelah kompresi
       }
-
+      const dailyAttendance = new DailyAttendance();
       // Simpan permission attendance hanya dengan file kompresi
       const permissionAttendance = new PermissionAttendance();
       permissionAttendance.date_request_permission = new Date().toISOString();
@@ -284,15 +312,17 @@ export class EmployeeService {
       permissionAttendance.proof_of_attendance = compressedPhotoFileName;
       permissionAttendance.employee = employee;
       permissionAttendance.status = 'Request';
+      dailyAttendance.employee = employee;
+      dailyAttendance.created_at = new Date();
 
       await this.permissionAttendanceRepository.save(permissionAttendance);
-
       return {
         statusCode: 201,
         status: 'success',
         message: 'Successfully sent permission attendance',
       };
     } catch (error) {
+      console.log(error);
       if (
         error instanceof BadRequestException ||
         error instanceof NotFoundException ||
@@ -488,16 +518,15 @@ export class EmployeeService {
   // Fungsi baru untuk create clock-in
   async createClockIn(
     token_auth: string, // Terima token_auth dari controller
-    createClockInDto: CreateClockInDto,
+    createClockInDto: CreateClockInDto, // Menggunakan DTO
   ): Promise<any> {
-    const { id_employee, address, latitude, longitude, photo, date, time } =
+    const { id_employee, address, latitude, longitude, photo, time } =
       createClockInDto;
 
     try {
       // Verifikasi token (memeriksa apakah token valid secara kriptografis)
       let decodedToken;
       try {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
       } catch (error) {
         if (error.name === 'JsonWebTokenError') {
@@ -507,14 +536,6 @@ export class EmployeeService {
         } else {
           throw new UnauthorizedException('Token verification failed');
         }
-      }
-
-      const validToken = await this.employeeRepository.findOne({
-        where: { token_auth },
-      });
-
-      if (!validToken) {
-        throw new NotFoundException('Token not found');
       }
 
       // Cari employee berdasarkan id_employee
@@ -531,6 +552,85 @@ export class EmployeeService {
       const company = employee.company;
       if (!company) {
         throw new NotFoundException('Company not found for this employee');
+      }
+
+      // --- Validasi absensi yang terlewat ---
+      const currentDate = new Date(); // Tanggal saat ini
+      const startOfDay = new Date(currentDate);
+      startOfDay.setHours(0, 0, 0, 0); // Mulai dari 00:00:00 hari ini
+
+      // Cari absensi terakhir karyawan
+      const lastAttendance = await this.dailyAttendanceRepository.findOne({
+        where: { employee: { id_employee } },
+        order: { created_at: 'DESC' }, // Dapatkan absensi terakhir
+      });
+
+      // Tentukan tanggal mulai pengecekan: jika ada absensi terakhir, mulai dari hari setelahnya
+      const lastDate = lastAttendance
+        ? new Date(lastAttendance.created_at)
+        : new Date(employee.created_at); // Jika tidak ada absensi, mulai dari tanggal employee dibuat
+      lastDate.setDate(lastDate.getDate() + 1); // Mulai dari hari setelah absensi terakhir
+
+      // Loop melalui semua hari dari lastDate hingga hari ini
+      let consecutiveAbsences = 0; // Counter untuk absen berturut-turut
+
+      while (lastDate < startOfDay) {
+        const startOfLastDate = new Date(lastDate);
+        startOfLastDate.setHours(0, 0, 0, 0); // Mulai dari 00:00 hari itu
+        const endOfLastDate = new Date(lastDate);
+        endOfLastDate.setHours(23, 59, 59, 999); // Hingga 23:59 hari itu
+
+        // Cek apakah ada absensi di hari tersebut
+        const attendance = await this.dailyAttendanceRepository.findOne({
+          where: {
+            employee: { id_employee },
+            created_at: Between(startOfLastDate, endOfLastDate),
+          },
+        });
+
+        // Jika tidak ada absensi, tandai sebagai alpha dan hitung absen berturut-turut
+        if (!attendance) {
+          const alphaAttendance = new DailyAttendance();
+          alphaAttendance.employee = employee;
+          alphaAttendance.attend_status = 'A'; // A untuk Alpha
+          alphaAttendance.created_at = startOfLastDate;
+          alphaAttendance.meal_money = 10000;
+
+          await this.dailyAttendanceRepository.save(alphaAttendance);
+
+          consecutiveAbsences += 1; // Tambahkan ke counter absen berturut-turut
+        } else {
+          consecutiveAbsences = 0; // Reset jika ada absen
+        }
+
+        // Pindah ke hari berikutnya
+        lastDate.setDate(lastDate.getDate() + 1);
+      }
+
+      // Jika absen berturut-turut lebih dari dua hari
+      if (consecutiveAbsences > 2) {
+        console.log('Karyawan tidak hadir lebih dari dua hari berturut-turut');
+      }
+
+      // --- Validasi: Cek jika sudah ada clock in pada hari ini tanpa clock out ---
+      const endOfDay = new Date(currentDate);
+      endOfDay.setHours(23, 59, 59, 999); // Hingga 23:59:59 hari ini
+      const existingAttendance = await this.dailyAttendanceRepository.findOne({
+        where: {
+          created_at: Between(startOfDay, endOfDay), // Cek berdasarkan tanggal hari ini
+          clockOut: null, // Pastikan belum ada clock out
+        },
+        relations: ['clockIn', 'clockIn.employee'], // Join relasi employee melalui clockIn
+      });
+
+      // Cek apakah employee_id dari clockIn sesuai
+      if (
+        existingAttendance &&
+        existingAttendance.clockIn &&
+        existingAttendance.clockIn.employee &&
+        existingAttendance.clockIn.employee.id_employee === id_employee
+      ) {
+        throw new BadRequestException('You have already clocked in for today.');
       }
 
       // Hitung jarak antara lokasi clock-in dan lokasi perusahaan
@@ -580,11 +680,26 @@ export class EmployeeService {
       clockIn.latitude = latitude;
       clockIn.longitude = longitude;
       clockIn.attendance_photo = `id_employee-${employee.id_employee}-${photoFileName}`;
-      clockIn.created_at = date;
+      clockIn.created_at = new Date();
       clockIn.time = time;
       clockIn.employee = employee;
 
       await this.clockInRepository.save(clockIn);
+
+      // --- Menambahkan Data ke Tabel daily_attendance ---
+      const dailyAttendance = new DailyAttendance();
+
+      dailyAttendance.catering_fee = 1000; // Atur sesuai aturan perusahaan
+      dailyAttendance.meal_money = 10000; // Atur sesuai aturan perusahaan
+      dailyAttendance.overtime_total = 1 || 0; // Atur sesuai aturan perusahaan
+      dailyAttendance.created_at = new Date(); // Tanggal saat ini
+      dailyAttendance.clockIn = clockIn; // Simpan clockIn dengan waktu 'H'
+      dailyAttendance.employee = employee;
+      dailyAttendance.attend_status = 'H';
+      dailyAttendance.half_day = 0.5;
+
+      // Simpan record ke tabel daily_attendance
+      await this.dailyAttendanceRepository.save(dailyAttendance);
 
       return {
         statusCode: 201,
@@ -592,6 +707,7 @@ export class EmployeeService {
         message: 'Successfully clocked in',
       };
     } catch (error) {
+      console.log(error);
       if (
         error instanceof BadRequestException ||
         error instanceof NotFoundException ||
@@ -599,6 +715,8 @@ export class EmployeeService {
       ) {
         throw error;
       }
+
+      // Tangkap error lain
       throw new InternalServerErrorException('Error clocking in');
     }
   }
@@ -606,15 +724,15 @@ export class EmployeeService {
   // Fungsi baru untuk create clock-out
   async createClockOut(
     token_auth: string, // Terima token_auth dari controller
-    createClockOutDto: CreateClockOutDto,
+    createClockOutDto: CreateClockOutDto, // Menggunakan DTO
   ): Promise<any> {
-    const { id_employee, address, latitude, longitude, photo, date, time } =
+    const { id_employee, address, latitude, longitude, photo, time } =
       createClockOutDto;
 
     try {
+      // 1. Verifikasi token JWT
       let decodedToken;
       try {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
       } catch (error) {
         if (error.name === 'JsonWebTokenError') {
@@ -626,18 +744,10 @@ export class EmployeeService {
         }
       }
 
-      const validToken = await this.employeeRepository.findOne({
-        where: { token_auth },
-      });
-
-      if (!validToken) {
-        throw new NotFoundException('Token not found');
-      }
-
-      // Cari employee berdasarkan id_employee
+      // 2. Cari employee berdasarkan id_employee
       const employee = await this.employeeRepository.findOne({
         where: { id_employee },
-        relations: ['company'],
+        relations: ['company'], // Pastikan mengambil data company juga
       });
 
       if (!employee) {
@@ -650,7 +760,34 @@ export class EmployeeService {
         throw new NotFoundException('Company not found for this employee');
       }
 
-      // Hitung jarak antara lokasi clock-in dan lokasi perusahaan
+      // --- Validasi: Cek apakah sudah ada clock in tanpa clock out pada hari ini ---
+      const currentDate = new Date(); // Tanggal saat ini
+      const startOfDay = new Date(currentDate);
+      startOfDay.setHours(0, 0, 0, 0); // Mulai dari 00:00:00 hari ini
+      const endOfDay = new Date(currentDate);
+      endOfDay.setHours(23, 59, 59, 999); // Hingga 23:59:59 hari ini
+
+      // Cari entri daily attendance dengan clockIn dan belum clockOut untuk employee ini
+      const existingAttendance = await this.dailyAttendanceRepository.findOne({
+        where: {
+          created_at: Between(startOfDay, endOfDay), // Cek berdasarkan tanggal hari ini
+          clockIn: { employee: { id_employee } }, // Cek clockIn berdasarkan employee_id
+        },
+        relations: ['clockIn', 'clockOut', 'clockIn.employee'], // Join relasi employee melalui clockIn dan clockOut
+      });
+
+      // Jika tidak ada entri clockIn, atau sudah ada clockOut, berarti user sudah clockOut
+      if (!existingAttendance) {
+        throw new BadRequestException('You have not clocked in today.');
+      }
+
+      if (existingAttendance.clockOut) {
+        throw new BadRequestException(
+          'You have already clocked out for today.',
+        );
+      }
+
+      // Hitung jarak antara lokasi clock-out dan lokasi perusahaan
       const distance = calculateDistance(
         company.latitude,
         company.longitude,
@@ -665,7 +802,7 @@ export class EmployeeService {
         );
       }
 
-      // Hapus '/clockin/' dari nama file jika ada
+      // Hapus '/clockout/' dari nama file jika ada
       const photoFileName = photo.replace('/clockout/', '');
 
       // Path untuk gambar asli dan kompres
@@ -695,17 +832,23 @@ export class EmployeeService {
       employee.employee_photo = `id_employee-${employee.id_employee}-${photoFileName}`;
       await this.employeeRepository.save(employee);
 
-      // Simpan clock-in jika jarak dalam radius
+      // Simpan clock-out jika jarak dalam radius
       const clockOut = new ClockOut();
       clockOut.address = address;
       clockOut.latitude = latitude;
       clockOut.longitude = longitude;
       clockOut.attendance_photo = `id_employee-${employee.id_employee}-${photoFileName}`;
-      clockOut.created_at = date;
+      clockOut.created_at = new Date();
       clockOut.time = time;
       clockOut.employee = employee;
 
-      await this.clockInRepository.save(clockOut);
+      await this.clockOutRepository.save(clockOut);
+
+      // --- Update Data di Tabel daily_attendance ---
+      existingAttendance.clockOut = clockOut;
+
+      // Simpan record ke tabel daily_attendance
+      await this.dailyAttendanceRepository.save(existingAttendance);
 
       return {
         statusCode: 201,
@@ -713,6 +856,8 @@ export class EmployeeService {
         message: 'Successfully clocked out',
       };
     } catch (error) {
+      // Tambahkan log error untuk mengetahui kesalahan spesifik
+
       if (
         error instanceof BadRequestException ||
         error instanceof NotFoundException ||
@@ -720,6 +865,8 @@ export class EmployeeService {
       ) {
         throw error;
       }
+
+      // Tangkap error lain
       throw new InternalServerErrorException('Error clocking out');
     }
   }
@@ -1273,7 +1420,6 @@ export class EmployeeService {
         },
       };
     } catch (error) {
-      // Jika error yang dilemparkan adalah NotFoundException atau UnauthorizedException, lempar kembali
       if (
         error instanceof NotFoundException ||
         error instanceof UnauthorizedException
@@ -1867,6 +2013,345 @@ export class EmployeeService {
       }
 
       throw new InternalServerErrorException('Error get all notification');
+    }
+  }
+
+  async getAttendancePeriod(
+    id_employee: number,
+    month: number,
+    year: number,
+  ): Promise<{ startPeriod: Date; endPeriod: Date }> {
+    // Ambil konfigurasi absensi karyawan dari database
+    const attendanceSetting = await this.attendanceSettingsRepository.findOne({
+      where: { employee: { id_employee } },
+    });
+
+    if (!attendanceSetting) {
+      throw new NotFoundException('Attendance settings not found for employee');
+    }
+
+    let startPeriod: Date;
+    let endPeriod: Date;
+
+    // Opsi 1: Absensi Bulanan Tetap
+    if (attendanceSetting.absensi_type === 'monthly_fixed') {
+      startPeriod = new Date(year, month - 1, 1); // Awal bulan
+      endPeriod = new Date(year, month, 0); // Akhir bulan (0 = hari terakhir bulan sebelumnya)
+    }
+
+    // Opsi 2: Absensi Berdasarkan Periode Custom
+    else if (attendanceSetting.absensi_type === 'custom_period') {
+      // Ambil periode khusus yang sudah ditentukan di database
+      startPeriod = new Date(attendanceSetting.custom_start_date);
+      endPeriod = new Date(attendanceSetting.custom_end_date);
+    }
+
+    return { startPeriod, endPeriod };
+  }
+
+  async monthAttendance(
+    token_auth: string,
+    monthAttendanceEmployeeDto: MonthAttendanceEmployeeDto,
+  ): Promise<any> {
+    const { id_employee, month, year } = monthAttendanceEmployeeDto;
+
+    try {
+      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
+      let decodedToken;
+      try {
+        decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
+      }
+
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
+        throw new NotFoundException('Token not found');
+      }
+
+      // Cari employee berdasarkan id_employee
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+        relations: ['company'], // Ambil juga data company terkait
+      });
+
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      // Ambil periode absensi berdasarkan bulan dan tahun
+      const startPeriod = new Date(`${year}-${month}-01`); // Tanggal mulai bulan
+      const endPeriod = new Date(startPeriod);
+      endPeriod.setMonth(endPeriod.getMonth() + 1);
+      endPeriod.setDate(0); // Tanggal akhir bulan
+
+      // Query untuk menghitung jumlah kehadiran, alpha, izin, overtime_total, dan half_day
+      const dailyAttendance = await this.dailyAttendanceRepository
+        .createQueryBuilder('daily_attendance')
+        .select('COUNT(*)', 'total_days')
+        .addSelect(
+          "SUM(CASE WHEN daily_attendance.attend_status = 'H' THEN 1 ELSE 0 END)",
+          'days_present',
+        )
+        .addSelect(
+          "SUM(CASE WHEN daily_attendance.attend_status = 'A' THEN 1 ELSE 0 END)",
+          'alpha_days',
+        )
+        .addSelect(
+          "SUM(CASE WHEN daily_attendance.attend_status = 'I' THEN 1 ELSE 0 END)",
+          'permit_days',
+        )
+        .addSelect(
+          'SUM(daily_attendance.overtime_total)', // Mengambil nilai overtime_total
+          'overtime_total',
+        )
+        .addSelect(
+          'SUM(daily_attendance.half_day)', // Treating half_day as a numeric value
+          'half_days',
+        )
+        .where('daily_attendance.employee_id = :id_employee', { id_employee })
+        .andWhere(
+          'daily_attendance.created_at BETWEEN :startPeriod AND :endPeriod',
+          {
+            startPeriod,
+            endPeriod,
+          },
+        )
+        .getRawOne();
+
+      // Pastikan overtime_total dan half_day diambil dengan benar
+      if (
+        !dailyAttendance ||
+        dailyAttendance.overtime_total === undefined ||
+        dailyAttendance.half_days === undefined
+      ) {
+        return {
+          statusCode: 404,
+          message: `No attendance records with overtime or half-day found for employee ID ${id_employee} in ${month}/${year}`,
+        };
+      }
+
+      // Cek apakah sudah ada entri di tabel monthly_attendance untuk employee ini
+      let monthlyAttendance = await this.monthlyAttendanceRepository.findOne({
+        where: {
+          employee: employee,
+          salary_period: `${year}-${month}`, // Cek berdasarkan bulan dan tahun
+        },
+      });
+
+      if (!monthlyAttendance) {
+        // Jika belum ada, buat record baru
+        monthlyAttendance = new MonthlyAttendance();
+        monthlyAttendance.employee = employee;
+        monthlyAttendance.salary_period = `${year}-${month}`;
+      }
+
+      // Update data di tabel monthly_attendance
+      monthlyAttendance.attend = dailyAttendance.days_present || 0; // Total hari hadir
+      monthlyAttendance.alpha = dailyAttendance.alpha_days || 0; // Total hari alpha
+      monthlyAttendance.permit = dailyAttendance.permit_days || 0; // Total hari izin
+      monthlyAttendance.overtime_total = dailyAttendance.overtime_total || 0; // Total overtime
+      monthlyAttendance.half_day = 0.5; // Total half-day
+      monthlyAttendance.attend_total =
+        (dailyAttendance.days_present || 0) +
+        (dailyAttendance.overtime_total || 0); //Total hadir + overtime
+
+      monthlyAttendance.work_total = dailyAttendance.total_days;
+
+      monthlyAttendance.half_day = 1 * dailyAttendance.half_days;
+
+      // Simpan ke database
+      await this.monthlyAttendanceRepository.save(monthlyAttendance);
+
+      return {
+        statusCode: 201,
+        data: {
+          ...dailyAttendance, // Menggabungkan seluruh data attendance
+          overtime_total: monthlyAttendance.overtime_total || 0, // Total overtime
+          half_days: monthlyAttendance.half_day || 0, // Total half-day
+        },
+        message: 'Monthly attendance calculated and saved successfully.',
+      };
+    } catch (error) {
+      console.log(error);
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Error calculating monthly attendance',
+      );
+    }
+  }
+
+  async paySlip(
+    token_auth: string,
+    paySlipEmployeeDto: PaySlipEmployeeDto,
+  ): Promise<any> {
+    const { id_employee, month, year } = paySlipEmployeeDto;
+
+    try {
+      // Verifikasi token
+      let decodedToken;
+      try {
+        decodedToken = this.jwtService.verify(token_auth); // Verifikasi JWT token
+      } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token format');
+        } else if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token expired');
+        } else {
+          throw new UnauthorizedException('Token verification failed');
+        }
+      }
+
+      const validToken = await this.employeeRepository.findOne({
+        where: { token_auth },
+      });
+
+      if (!validToken) {
+        throw new NotFoundException('Token not found');
+      }
+
+      const employee = await this.employeeRepository.findOne({
+        where: { id_employee },
+        relations: ['company'], // Ambil juga data company terkait
+      });
+
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+
+      // Ambil periode absensi berdasarkan bulan dan tahun
+      const salaryPeriod = `${year}-${month}`; // Buat salary_period dari year dan month
+
+      // Cek apakah paySlip sudah ada untuk salaryPeriod dan employee ini
+      let paySlip = await this.paySlipRepository.findOne({
+        where: {
+          employee: { id_employee },
+        },
+      });
+
+      if (!paySlip) {
+        // Jika paySlip belum ada, buat entri baru
+        paySlip = new PaySlip();
+        paySlip.employee = employee;
+      }
+      // Ambil data monthlyAttendance dan hitung komponen upah
+      const startPeriod = new Date(`${year}-${month}-01`);
+      const endPeriod = new Date(startPeriod);
+      endPeriod.setMonth(endPeriod.getMonth() + 1);
+      endPeriod.setDate(0);
+
+      const dailyAttendance = await this.dailyAttendanceRepository
+        .createQueryBuilder('daily_attendance')
+        .select('COUNT(*)', 'total_days')
+        .addSelect(
+          "SUM(CASE WHEN daily_attendance.attend_status = 'H' THEN 1 ELSE 0 END)",
+          'days_present',
+        )
+        .addSelect(
+          "SUM(CASE WHEN daily_attendance.attend_status = 'A' THEN 1 ELSE 0 END)",
+          'alpha_days',
+        )
+        .addSelect(
+          "SUM(CASE WHEN daily_attendance.attend_status = 'I' THEN 1 ELSE 0 END)",
+          'permit_days',
+        )
+        .where('daily_attendance.employee_id = :id_employee', { id_employee })
+        .andWhere(
+          'daily_attendance.created_at BETWEEN :startPeriod AND :endPeriod',
+          {
+            startPeriod,
+            endPeriod,
+          },
+        )
+        .getRawOne();
+
+      if (!dailyAttendance) {
+        return {
+          statusCode: 404,
+          message: `No attendance records found for employee ID ${id_employee} in ${month}/${year}`,
+        };
+      }
+
+      const monthlyAttendance = await this.monthlyAttendanceRepository.findOne({
+        where: {
+          employee: { id_employee },
+          salary_period: salaryPeriod,
+        },
+      });
+
+      if (!monthlyAttendance) {
+        return {
+          statusCode: 404,
+          message: `No monthly attendance found for employee ID ${id_employee} in ${month}/${year}`,
+        };
+      }
+
+      const dailyWage = 150000; // Upah per hari
+      const baseWage = dailyWage * dailyAttendance.days_present;
+      const totalOvertimeHours = monthlyAttendance.overtime_total || 0;
+      const overtimeRate = 1200; // Upah lembur per jam
+      const overtimePay = totalOvertimeHours * overtimeRate;
+      const mealAllowance = 12000 * dailyAttendance.days_present;
+      const totalMealMoney = mealAllowance || 0;
+      const totalOvertime = overtimePay || 0;
+      const grandTotal = baseWage + totalMealMoney + totalOvertime;
+      const pph = grandTotal * 0.02;
+      const totalReceived = grandTotal - pph;
+
+      // Update atau isi data payslip
+      paySlip.daily_wage = dailyWage;
+      paySlip.monthly_wage = baseWage;
+      paySlip.daily_wage_overtime = overtimeRate;
+      paySlip.overtime_total = totalOvertime;
+      paySlip.meal_money_total = totalMealMoney;
+      paySlip.grand_total = grandTotal;
+      paySlip.total_salary_minus_meals = grandTotal - totalMealMoney;
+      paySlip.pph = pph;
+      paySlip.total_received = totalReceived;
+
+      await this.paySlipRepository.save(paySlip); // Simpan atau update paySlip
+
+      return {
+        statusCode: 201,
+        data: {
+          daily_wage: dailyWage,
+          base_wage: baseWage,
+          total_overtime_hours: totalOvertimeHours,
+          total_overtime_pay: totalOvertime,
+          meal_money: totalMealMoney,
+          grand_total: grandTotal,
+          pph: pph,
+          total_received: totalReceived,
+        },
+        message: 'Monthly attendance and salary calculated successfully.',
+      };
+    } catch (error) {
+      console.log(error);
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Error calculating monthly attendance and salary',
+      );
     }
   }
 }
