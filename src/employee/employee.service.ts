@@ -667,7 +667,7 @@ export class EmployeeService {
 
       let totalOvertimeHours = 0;
       let totalHalfDays = 0;
-      let totalMealMoney = 0;
+
       let totalRegularDays = 0;
       let totalMonthlyOvertime = 0;
 
@@ -680,11 +680,12 @@ export class EmployeeService {
         record.attend_status === 'H' && (totalMonthlyOvertime += 1);
       });
 
-      totalMealMoney +=
+      const totalMealMoneyHours =
         totalRegularDays +
         totalAlphaDays +
         totalOvertimeHours +
         totalOvertimeHours;
+      const totalMealMoneyPay = 12000 * totalMealMoneyHours;
 
       // Hitung gaji dan lembur
       const dailyWage = 80000;
@@ -693,8 +694,8 @@ export class EmployeeService {
       const overtimeRate = 10000;
       const totalOvertimePay = totalOvertimeHours * overtimeRate;
 
-      const grandTotal =
-        baseWage + totalMealMoney + totalOvertimePay + halfDayPay;
+      const grandTotal = baseWage + totalMealMoneyPay + totalOvertimePay;
+      const totalSalaryMinusMeals = grandTotal - totalMealMoneyPay;
       const pph = grandTotal * 0.02;
       const totalReceived = grandTotal - pph;
 
@@ -716,8 +717,9 @@ export class EmployeeService {
       paySlip.daily_wage = dailyWage;
       paySlip.monthly_wage = baseWage;
       paySlip.daily_wage_overtime = overtimeRate;
+      paySlip.total_salary_minus_meals = totalSalaryMinusMeals;
       paySlip.overtime_total = totalOvertimePay;
-      paySlip.meal_money_total = totalMealMoney;
+      paySlip.meal_money_total = totalMealMoneyPay;
       paySlip.grand_total = grandTotal;
       paySlip.pph = pph;
       paySlip.total_received = totalReceived;
@@ -754,7 +756,7 @@ export class EmployeeService {
       monthlyAttendance.total_hour_overtime +=
         dailyAttendance.overtime_total_hour || 0;
       monthlyAttendance.catering_deduction = totalCateringDeduction;
-      monthlyAttendance.meal_money = totalMealMoney;
+      monthlyAttendance.meal_money = totalMealMoneyHours;
       monthlyAttendance.half_day = totalHalfDays;
       monthlyAttendance.attend_total = attendTotal;
       monthlyAttendance.work_total = totalWork;
