@@ -2054,6 +2054,7 @@ export class EmployeeService {
     year: number,
   ): Promise<{ startPeriod: Date; endPeriod: Date }> {
     // Ambil konfigurasi absensi karyawan dari database
+
     const attendanceSetting = await this.attendanceSettingsRepository.findOne({
       where: { employee: { id_employee } },
     });
@@ -2088,10 +2089,10 @@ export class EmployeeService {
     const { id_employee, month, year } = monthAttendanceEmployeeDto;
 
     try {
-      // Verifikasi token
+      // Verify the token
       let decodedToken;
       try {
-        decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
+        decodedToken = this.jwtService.verify(token_auth); // Verifying the JWT token
       } catch (error) {
         if (error.name === 'JsonWebTokenError') {
           throw new UnauthorizedException('Invalid token format');
@@ -2102,51 +2103,53 @@ export class EmployeeService {
         }
       }
 
-      const validToken = await this.employeeRepository.findOne({
-        where: { token_auth },
-      });
-
-      if (!validToken) {
-        throw new NotFoundException('Token not found');
-      }
-
-      // Cari employee berdasarkan id_employee
+      // Fetch employee by id_employee
       const employee = await this.employeeRepository.findOne({
         where: { id_employee },
-        relations: ['company'], // Ambil juga data company terkait
+        relations: ['company'], // Also fetch related company data
       });
 
       if (!employee) {
         throw new NotFoundException('Employee not found');
       }
 
-      // Ambil informasi dari company terkait
+      // Get the related company information
       const company = employee.company;
 
-      // Variabel untuk periode absensi
+      // Variables to store the attendance period
       let startPeriod: Date;
       let endPeriod: Date;
       let attendanceType: string;
 
-      // Cek apakah start_period_attendance dan end_period_attendance kosong/null
-      if (!company.start_period_attendance || !company.end_period_attendance) {
-        // Jika kosong, gunakan monthly_fixed
-        startPeriod = new Date(year, month - 1, 1); // Awal bulan
-        endPeriod = new Date(year, month, 0); // Hari terakhir bulan
-        attendanceType = 'monthly_fixed';
+      // Check if the company has custom start and end periods for attendance
+      if (company.start_period_attendance && company.end_period_attendance) {
+        // Extract start and end dates
+        // const startDay = 15; // Static start date (15th)
+
+        // Create dynamic start and end periods
+        const currentDate = new Date(); // Current date to base the calculation
+        const currentMonth = currentDate.getMonth();
+        const currentYear = currentDate.getFullYear();
+        const date = currentDate.getDate();
+        // Calculate the start and end periods based on the 15th of the current month
+        startPeriod = new Date(currentYear, currentMonth, date); // 15th of the current month
+        endPeriod = new Date(currentYear, currentMonth + 1, date - 1); // 14th of the next month
+
+        attendanceType = 'custom_period'; // Mark attendance type as custom
       } else {
-        // Jika ada nilai di start_period_attendance dan end_period_attendance, gunakan custom_period
-        startPeriod = new Date(company.start_period_attendance);
-        endPeriod = new Date(company.end_period_attendance);
-        attendanceType = 'custom_period';
+        // Default to monthly_fixed (15th of the previous month to 14th of this month)
+        const startDay = 15;
+        startPeriod = new Date(year, month - 1, startDay); // 15th of the previous month
+        endPeriod = new Date(year, month, startDay - 1); // 14th of the current month
+        attendanceType = 'monthly_fixed';
       }
 
-      // Logging tipe absensi untuk debugging
+      // Log attendance type for debugging
       console.log('Attendance type:', attendanceType);
       console.log('Start period:', startPeriod);
       console.log('End period:', endPeriod);
 
-      // Query untuk menghitung jumlah kehadiran, alpha, izin, overtime_total, dan half_day
+      // Query to calculate attendance statistics
       const dailyAttendance = await this.dailyAttendanceRepository
         .createQueryBuilder('daily_attendance')
         .select('COUNT(*)', 'total_days')
@@ -2165,19 +2168,16 @@ export class EmployeeService {
         .addSelect(
           'SUM(COALESCE(daily_attendance.overtime_total_hour, 0))',
           'overtime_total',
-        ) // Menangani nilai null
+        ) // Handle null values
         .addSelect('SUM(COALESCE(daily_attendance.half_day, 0))', 'half_days')
         .where('daily_attendance.employee_id = :id_employee', { id_employee })
         .andWhere(
           'daily_attendance.created_at BETWEEN :startPeriod AND :endPeriod',
-          {
-            startPeriod,
-            endPeriod,
-          },
+          { startPeriod, endPeriod },
         )
         .getRawOne();
 
-      // Pastikan overtime_total dan half_day diambil dengan benar
+      // Ensure overtime_total and half_day are correctly calculated
       if (
         !dailyAttendance ||
         dailyAttendance.overtime_total === undefined ||
@@ -2185,86 +2185,63 @@ export class EmployeeService {
       ) {
         return {
           statusCode: 404,
-          message: `No attendance records with overtime or half-day found for employee ID ${id_employee} in ${month}/${year}`,
+          message: `No attendance records with overtime or half-day found for employee ID ${id_employee} in the given period.`,
         };
       }
 
-      // Cek apakah sudah ada entri di tabel monthly_attendance untuk employee ini
+      // Check if there's already an entry in the monthly_attendance table for this employee
       let monthlyAttendance = await this.monthlyAttendanceRepository.findOne({
         where: {
           employee: employee,
-          salary_period: `${year}-${month}`, // Cek berdasarkan bulan dan tahun
+          salary_period:
+            attendanceType === 'custom_period'
+              ? `${startPeriod.toISOString().split('T')[0]}_${endPeriod.toISOString().split('T')[0]}`
+              : `${year}-${month}`, // Match the salary period to the attendance type
         },
       });
 
-      const totalMonthCateringDeduction =
-        (parseFloat(dailyAttendance.days_present) || 0) +
-        (parseFloat(dailyAttendance.half_days) || 0) +
-        (parseFloat(dailyAttendance.overtime_total) || 0);
-
-      const totalHalfDay = parseFloat(dailyAttendance.half_days) || 0;
-      const totalMealMoneyHours =
-        (parseFloat(dailyAttendance.days_present) || 0) +
-        (parseFloat(dailyAttendance.half_days) || 0) +
-        (parseFloat(dailyAttendance.overtime_total) || 0) +
-        (parseFloat(dailyAttendance.alpha_days) || 0);
-
-      const attendTotal =
-        (parseFloat(dailyAttendance.days_present) || 0) +
-        (parseFloat(dailyAttendance.alpha_days) || 0) +
-        (parseFloat(dailyAttendance.days_present) || 0) +
-        (parseFloat(dailyAttendance.half_days) || 0);
-
-      const totalWork =
-        attendTotal +
-        (parseFloat(dailyAttendance.permit_days) || 0) +
-        (parseFloat(dailyAttendance.half_days) || 0) +
-        (parseFloat(dailyAttendance.overtime_total) || 0) +
-        (parseFloat(dailyAttendance.alpha_days) || 0);
-
-      const totalHourMonthlyOvertime =
-        parseFloat(dailyAttendance.overtime_total) || 0;
-
-      const totalMonthlyOvertime =
-        parseFloat(dailyAttendance.days_present) || 0;
-
+      // Create or update the monthly entry
       if (!monthlyAttendance) {
-        // Jika belum ada, buat record baru
         monthlyAttendance = new MonthlyAttendance();
         monthlyAttendance.employee = employee;
-        monthlyAttendance.salary_period = `${year}-${month}`;
+        monthlyAttendance.salary_period =
+          attendanceType === 'custom_period'
+            ? `${startPeriod.toISOString().split('T')[0]}_${endPeriod.toISOString().split('T')[0]}`
+            : `${year}-${month}`;
       }
 
-      // Pastikan semua nilai numerik diinisialisasi dengan benar
+      // Update or create the monthly attendance record on every clock-in
       monthlyAttendance.alpha = parseFloat(dailyAttendance.alpha_days) || 0;
       monthlyAttendance.permit = parseFloat(dailyAttendance.permit_days) || 0;
       monthlyAttendance.attend = parseFloat(dailyAttendance.days_present) || 0;
-      monthlyAttendance.total_hour_overtime = totalHourMonthlyOvertime;
-      monthlyAttendance.catering_deduction = totalMonthCateringDeduction;
-      monthlyAttendance.meal_money = totalMealMoneyHours;
-      monthlyAttendance.half_day = totalHalfDay;
-      monthlyAttendance.attend_total = attendTotal;
-      monthlyAttendance.work_total = totalWork;
-      monthlyAttendance.overtime = totalMonthlyOvertime;
+      monthlyAttendance.total_hour_overtime =
+        parseFloat(dailyAttendance.overtime_total) || 0;
+      monthlyAttendance.catering_deduction =
+        parseFloat(dailyAttendance.overtime_total) || 0;
+      monthlyAttendance.meal_money = parseFloat(dailyAttendance.half_days) || 0;
+      monthlyAttendance.half_day = parseFloat(dailyAttendance.half_days) || 0;
+      monthlyAttendance.attend_total =
+        parseFloat(dailyAttendance.days_present) +
+          parseFloat(dailyAttendance.alpha_days) || 0;
+      monthlyAttendance.work_total =
+        parseFloat(dailyAttendance.days_present) +
+          parseFloat(dailyAttendance.permit_days) || 0;
 
-      // Log before saving to ensure the data is populated correctly
-      console.log('Saving monthly attendance:', monthlyAttendance);
-
-      // Simpan ke database
+      // Save or update to the database
       await this.monthlyAttendanceRepository.save(monthlyAttendance);
 
       return {
         statusCode: 201,
         data: {
           total_days: dailyAttendance.total_days || 0,
-          days_present: monthlyAttendance.attend || 0,
-          alpha_days: monthlyAttendance.alpha || 0,
-          permit_days: monthlyAttendance.permit || 0,
-          overtime_total: monthlyAttendance.total_hour_overtime || 0,
-          half_days: monthlyAttendance.half_day || 0,
-          attend_total: monthlyAttendance.attend_total || 0,
+          days_present: monthlyAttendance.attend,
+          alpha_days: monthlyAttendance.alpha,
+          permit_days: monthlyAttendance.permit,
+          overtime_total: monthlyAttendance.total_hour_overtime,
+          half_days: monthlyAttendance.half_day,
+          attend_total: monthlyAttendance.attend_total,
         },
-        message: 'Monthly attendance calculated and saved successfully.',
+        message: 'Monthly attendance updated and saved successfully.',
       };
     } catch (error) {
       console.error('Error calculating totalMonthCateringDeduction:', error);
