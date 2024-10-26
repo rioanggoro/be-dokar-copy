@@ -2089,10 +2089,10 @@ export class EmployeeService {
     const { id_employee, month, year } = monthAttendanceEmployeeDto;
 
     try {
-      // Verify the token
+      // Verifikasi token JWT
       let decodedToken;
       try {
-        decodedToken = this.jwtService.verify(token_auth); // Verifying the JWT token
+        decodedToken = this.jwtService.verify(token_auth);
       } catch (error) {
         if (error.name === 'JsonWebTokenError') {
           throw new UnauthorizedException('Invalid token format');
@@ -2103,53 +2103,55 @@ export class EmployeeService {
         }
       }
 
-      // Fetch employee by id_employee
+      // Ambil employee berdasarkan id_employee
       const employee = await this.employeeRepository.findOne({
         where: { id_employee },
-        relations: ['company'], // Also fetch related company data
+        relations: ['company'],
       });
 
       if (!employee) {
         throw new NotFoundException('Employee not found');
       }
 
-      // Get the related company information
+      // Ambil informasi terkait dari company
       const company = employee.company;
 
-      // Variables to store the attendance period
+      // Variabel untuk periode absensi
       let startPeriod: Date;
       let endPeriod: Date;
       let attendanceType: string;
 
-      // Check if the company has custom start and end periods for attendance
+      // Cek apakah ada custom start_period_attendance dan end_period_attendance
       if (company.start_period_attendance && company.end_period_attendance) {
-        // Extract start and end dates
-        // const startDay = 15; // Static start date (15th)
+        // Ambil tanggal dari company dan konversi ke Date
+        const startDay = new Date(company.start_period_attendance).getDate();
+        const endDay = new Date(company.end_period_attendance).getDate();
 
-        // Create dynamic start and end periods
-        const currentDate = new Date(); // Current date to base the calculation
+        console.log('startDay:', startDay, 'endDay:', endDay);
+
+        // Gunakan tahun dan bulan dari tanggal saat ini
+        const currentDate = new Date();
         const currentMonth = currentDate.getMonth();
         const currentYear = currentDate.getFullYear();
-        const date = currentDate.getDate();
-        // Calculate the start and end periods based on the 15th of the current month
-        startPeriod = new Date(currentYear, currentMonth, date); // 15th of the current month
-        endPeriod = new Date(currentYear, currentMonth + 1, date - 1); // 14th of the next month
 
-        attendanceType = 'custom_period'; // Mark attendance type as custom
+        // Buat startPeriod dan endPeriod berdasarkan data dari company
+        startPeriod = new Date(currentYear, currentMonth, startDay);
+        endPeriod = new Date(currentYear, currentMonth + 1, endDay);
+
+        attendanceType = 'custom_period';
       } else {
-        // Default to monthly_fixed (15th of the previous month to 14th of this month)
+        // Jika tidak ada custom period, gunakan periode default monthly_fixed
         const startDay = 15;
-        startPeriod = new Date(year, month - 1, startDay); // 15th of the previous month
-        endPeriod = new Date(year, month, startDay - 1); // 14th of the current month
+        startPeriod = new Date(year, month - 1, startDay);
+        endPeriod = new Date(year, month, startDay - 1);
         attendanceType = 'monthly_fixed';
       }
 
-      // Log attendance type for debugging
-      console.log('Attendance type:', attendanceType);
+      // Debugging untuk memastikan startPeriod dan endPeriod benar
       console.log('Start period:', startPeriod);
       console.log('End period:', endPeriod);
 
-      // Query to calculate attendance statistics
+      // Query untuk menghitung statistik absensi harian
       const dailyAttendance = await this.dailyAttendanceRepository
         .createQueryBuilder('daily_attendance')
         .select('COUNT(*)', 'total_days')
@@ -2168,7 +2170,7 @@ export class EmployeeService {
         .addSelect(
           'SUM(COALESCE(daily_attendance.overtime_total_hour, 0))',
           'overtime_total',
-        ) // Handle null values
+        )
         .addSelect('SUM(COALESCE(daily_attendance.half_day, 0))', 'half_days')
         .where('daily_attendance.employee_id = :id_employee', { id_employee })
         .andWhere(
@@ -2177,7 +2179,7 @@ export class EmployeeService {
         )
         .getRawOne();
 
-      // Ensure overtime_total and half_day are correctly calculated
+      // Validasi apakah data dailyAttendance ada
       if (
         !dailyAttendance ||
         dailyAttendance.overtime_total === undefined ||
@@ -2189,28 +2191,52 @@ export class EmployeeService {
         };
       }
 
-      // Check if there's already an entry in the monthly_attendance table for this employee
+      // Cek apakah sudah ada entri di tabel monthly_attendance untuk employee ini
       let monthlyAttendance = await this.monthlyAttendanceRepository.findOne({
         where: {
           employee: employee,
           salary_period:
             attendanceType === 'custom_period'
-              ? `${startPeriod.toISOString().split('T')[0]}_${endPeriod.toISOString().split('T')[0]}`
-              : `${year}-${month}`, // Match the salary period to the attendance type
+              ? `${startPeriod.getFullYear()}-${(startPeriod.getMonth() + 1)
+                  .toString()
+                  .padStart(2, '0')}-${startPeriod
+                  .getDate()
+                  .toString()
+                  .padStart(2, '0')}_${endPeriod.getFullYear()}-${(
+                  endPeriod.getMonth() + 1
+                )
+                  .toString()
+                  .padStart(2, '0')}-${endPeriod
+                  .getDate()
+                  .toString()
+                  .padStart(2, '0')}`
+              : `${year}-${month}`, // Sesuaikan dengan tipe absensi
         },
       });
 
-      // Create or update the monthly entry
+      // Membuat atau memperbarui entri bulanan
       if (!monthlyAttendance) {
         monthlyAttendance = new MonthlyAttendance();
         monthlyAttendance.employee = employee;
         monthlyAttendance.salary_period =
           attendanceType === 'custom_period'
-            ? `${startPeriod.toISOString().split('T')[0]}_${endPeriod.toISOString().split('T')[0]}`
+            ? `${startPeriod.getFullYear()}-${(startPeriod.getMonth() + 1)
+                .toString()
+                .padStart(2, '0')}-${startPeriod
+                .getDate()
+                .toString()
+                .padStart(2, '0')}_${endPeriod.getFullYear()}-${(
+                endPeriod.getMonth() + 1
+              )
+                .toString()
+                .padStart(2, '0')}-${endPeriod
+                .getDate()
+                .toString()
+                .padStart(2, '0')}`
             : `${year}-${month}`;
       }
 
-      // Update or create the monthly attendance record on every clock-in
+      // Update atau buat entri bulanan berdasarkan hasil dailyAttendance
       monthlyAttendance.alpha = parseFloat(dailyAttendance.alpha_days) || 0;
       monthlyAttendance.permit = parseFloat(dailyAttendance.permit_days) || 0;
       monthlyAttendance.attend = parseFloat(dailyAttendance.days_present) || 0;
@@ -2227,7 +2253,7 @@ export class EmployeeService {
         parseFloat(dailyAttendance.days_present) +
           parseFloat(dailyAttendance.permit_days) || 0;
 
-      // Save or update to the database
+      // Simpan atau perbarui ke database
       await this.monthlyAttendanceRepository.save(monthlyAttendance);
 
       return {
