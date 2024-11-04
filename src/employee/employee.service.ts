@@ -2056,10 +2056,10 @@ export class EmployeeService {
     const { id_employee, month, year } = monthAttendanceEmployeeDto;
 
     try {
-      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
+      // Verifikasi token
       let decodedToken;
       try {
-        decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
+        decodedToken = this.jwtService.verify(token_auth);
       } catch (error) {
         if (error.name === 'JsonWebTokenError') {
           throw new UnauthorizedException('Invalid token format');
@@ -2156,18 +2156,26 @@ export class EmployeeService {
       }
 
       // Update data di tabel monthly_attendance
-      monthlyAttendance.attend = dailyAttendance.days_present || 0; // Total hari hadir
-      monthlyAttendance.alpha = dailyAttendance.alpha_days || 0; // Total hari alpha
-      monthlyAttendance.permit = dailyAttendance.permit_days || 0; // Total hari izin
-      monthlyAttendance.overtime_total = dailyAttendance.overtime_total || 0; // Total overtime
-      monthlyAttendance.half_day = 0.5; // Total half-day
+      const totalPresent = parseFloat(dailyAttendance.days_present) || 0;
+      const totalHalfDays = parseFloat(dailyAttendance.half_days) || 0; // Half-day as numeric
+      const totalOvertime = parseFloat(dailyAttendance.overtime_total); // Overtime as hours
+      const totalPermit = parseFloat(dailyAttendance.permit_days) || 0;
+
+      const overtimeInDays = totalOvertime / 8;
+
+      monthlyAttendance.attend = totalPresent; // Total kehadiran penuh
+      monthlyAttendance.alpha = parseFloat(dailyAttendance.alpha_days) || 0; // Total hari alpha
+      monthlyAttendance.permit = totalPermit; // Total hari izin
+      monthlyAttendance.overtime_total = totalOvertime; // Total overtime
+      monthlyAttendance.half_day = totalHalfDays; // Total half-day
+
+      // Total jam kerja dihitung dari hadir penuh + half-day + izin + overtime
       monthlyAttendance.attend_total =
-        (dailyAttendance.days_present || 0) +
-        (dailyAttendance.overtime_total || 0); //Total hadir + overtime
+        totalPresent + totalHalfDays + overtimeInDays;
 
-      monthlyAttendance.work_total = dailyAttendance.total_days;
-
-      monthlyAttendance.half_day = 1 * dailyAttendance.half_days;
+      // Bulatkan ke 2 desimal jika total_hours adalah jam
+      monthlyAttendance.attend_total =
+        Math.round(monthlyAttendance.attend_total * 100) / 100;
 
       // Simpan ke database
       await this.monthlyAttendanceRepository.save(monthlyAttendance);
@@ -2175,9 +2183,13 @@ export class EmployeeService {
       return {
         statusCode: 201,
         data: {
-          ...dailyAttendance, // Menggabungkan seluruh data attendance
-          overtime_total: monthlyAttendance.overtime_total || 0, // Total overtime
-          half_days: monthlyAttendance.half_day || 0, // Total half-day
+          total_days: dailyAttendance.total_days || 0,
+          days_present: totalPresent,
+          alpha_days: monthlyAttendance.alpha || 0,
+          permit_days: totalPermit,
+          overtime_total: monthlyAttendance.overtime_total || 0,
+          half_days: totalHalfDays || 0,
+          attend_total: monthlyAttendance.attend_total || 0,
         },
         message: 'Monthly attendance calculated and saved successfully.',
       };
@@ -2249,6 +2261,7 @@ export class EmployeeService {
         paySlip = new PaySlip();
         paySlip.employee = employee;
       }
+
       // Ambil data monthlyAttendance dan hitung komponen upah
       const startPeriod = new Date(`${year}-${month}-01`);
       const endPeriod = new Date(startPeriod);
@@ -2269,6 +2282,10 @@ export class EmployeeService {
         .addSelect(
           "SUM(CASE WHEN daily_attendance.attend_status = 'I' THEN 1 ELSE 0 END)",
           'permit_days',
+        )
+        .addSelect(
+          'SUM(daily_attendance.half_day)', // Menghitung half-days
+          'half_days',
         )
         .where('daily_attendance.employee_id = :id_employee', { id_employee })
         .andWhere(
@@ -2301,15 +2318,19 @@ export class EmployeeService {
         };
       }
 
+      const monthlyAttendnce = new MonthlyAttendance();
       const dailyWage = 150000; // Upah per hari
-      const baseWage = dailyWage * dailyAttendance.days_present;
+      const baseWage = dailyWage * dailyAttendance.days_present; //upah poko bulanan
       const totalOvertimeHours = monthlyAttendance.overtime_total || 0;
-      const overtimeRate = 1200; // Upah lembur per jam
+      const overtimeRate = 12000; // Upah lembur per jam
       const overtimePay = totalOvertimeHours * overtimeRate;
       const mealAllowance = 12000 * dailyAttendance.days_present;
+      const halfDayPay =
+        (parseFloat(dailyAttendance.half_days) || 0) * (dailyWage / 1); // Half-day pay
+
       const totalMealMoney = mealAllowance || 0;
       const totalOvertime = overtimePay || 0;
-      const grandTotal = baseWage + totalMealMoney + totalOvertime;
+      const grandTotal = baseWage + totalMealMoney + totalOvertime + halfDayPay; // Include half-day pay
       const pph = grandTotal * 0.02;
       const totalReceived = grandTotal - pph;
 
@@ -2318,6 +2339,7 @@ export class EmployeeService {
       paySlip.monthly_wage = baseWage;
       paySlip.daily_wage_overtime = overtimeRate;
       paySlip.overtime_total = totalOvertime;
+      monthlyAttendnce.half_day = halfDayPay; // Include half-day total
       paySlip.meal_money_total = totalMealMoney;
       paySlip.grand_total = grandTotal;
       paySlip.total_salary_minus_meals = grandTotal - totalMealMoney;
@@ -2333,6 +2355,7 @@ export class EmployeeService {
           base_wage: baseWage,
           total_overtime_hours: totalOvertimeHours,
           total_overtime_pay: totalOvertime,
+          half_day_pay: halfDayPay, // Return half-day pay
           meal_money: totalMealMoney,
           grand_total: grandTotal,
           pph: pph,

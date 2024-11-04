@@ -24,14 +24,14 @@ export class MonthlyAttendance {
   @Column({ type: 'double precision' })
   overtime_total: number;
 
-  @Column({ type: 'varchar' })
-  attend: string;
+  @Column({ type: 'int' })
+  attend: number;
 
-  @Column({ type: 'varchar' })
-  permit: string;
+  @Column({ type: 'int' })
+  permit: number;
 
-  @Column({ type: 'varchar' })
-  alpha: string;
+  @Column({ type: 'int' })
+  alpha: number;
 
   @Column({ type: 'double precision' })
   half_day: number;
@@ -39,8 +39,8 @@ export class MonthlyAttendance {
   @Column({ type: 'varchar' })
   salary_period: string;
 
-  @Column({ type: 'varchar' })
-  attend_total: string;
+  @Column({ type: 'double precision' })
+  attend_total: number;
 
   @Column({ type: 'varchar' })
   work_total: string;
