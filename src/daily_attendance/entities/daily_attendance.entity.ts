@@ -4,6 +4,7 @@ import {
   PrimaryGeneratedColumn,
   JoinColumn,
   OneToOne,
+  ManyToOne,
 } from 'typeorm';
 
 import { ClockIn } from 'src/clockin/entities/clockin.entity'; // Import ClockIn entity
@@ -22,8 +23,8 @@ export class DailyAttendance {
   @Column({ type: 'double precision' })
   meal_money: number;
 
-  @Column({ type: 'double precision' })
-  overtime_total: number;
+  // @Column({ type: 'character varying', length: 1 })
+  // overtime_total: string;
 
   @Column({ type: 'date' })
   created_at: Date;
@@ -33,6 +34,9 @@ export class DailyAttendance {
 
   @Column({ type: 'double precision' })
   half_day: number;
+
+  @Column({ type: 'int' })
+  overtime_total_hour: number;
 
   @OneToOne(() => ClockIn, (clockIn) => clockIn.dailyAttendance)
   @JoinColumn({ name: 'clock_in_id' })
@@ -46,9 +50,10 @@ export class DailyAttendance {
   @JoinColumn({ name: 'employee_id' })
   employee: Employee;
 
-  @OneToOne(
+  @ManyToOne(
     () => MonthlyAttendance,
     (monthlyAttendance) => monthlyAttendance.dailyAttendance,
   )
+  @JoinColumn({ name: 'monthly_attendance_id' })
   monthlyAttendance: MonthlyAttendance;
 }

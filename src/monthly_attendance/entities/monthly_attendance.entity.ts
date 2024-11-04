@@ -16,13 +16,13 @@ export class MonthlyAttendance {
   id_monthly_attendance: number;
 
   @Column({ type: 'double precision' })
-  catering_fee: number;
+  catering_deduction: number;
 
   @Column({ type: 'double precision' })
   meal_money: number;
 
   @Column({ type: 'double precision' })
-  overtime_total: number;
+  total_hour_overtime: number;
 
   @Column({ type: 'int' })
   attend: number;
@@ -42,14 +42,16 @@ export class MonthlyAttendance {
   @Column({ type: 'double precision' })
   attend_total: number;
 
-  @Column({ type: 'varchar' })
-  work_total: string;
+  @Column({ type: 'double precision' })
+  work_total: number;
 
-  @ManyToOne(
+  @Column({ type: 'integer' })
+  overtime: number;
+
+  @OneToOne(
     () => DailyAttendance,
     (dailyAttendance) => dailyAttendance.monthlyAttendance,
   )
-  @JoinColumn({ name: 'daily_attendance_id' })
   dailyAttendance: DailyAttendance;
 
   // Tambahkan relasi Many-to-One ke Employee

@@ -40,13 +40,14 @@ export class PaySlip {
 
   @Column('double precision')
   total_received: number;
+  @Column({ type: 'varchar' })
+  salary_period: string;
 
   @OneToMany(
     () => MonthlyAttendance,
     (monthlyAttendance) => monthlyAttendance.paySlip,
   )
   monthlyAttendances: MonthlyAttendance[];
-  salary_period: string;
 
   @OneToOne(() => Employee, (employee) => employee.paySlip)
   @JoinColumn({ name: 'employee_id' })

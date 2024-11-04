@@ -517,14 +517,14 @@ export class EmployeeService {
   }
   // Fungsi baru untuk create clock-in
   async createClockIn(
-    token_auth: string, // Terima token_auth dari controller
-    createClockInDto: CreateClockInDto, // Menggunakan DTO
+    token_auth: string,
+    createClockInDto: CreateClockInDto,
   ): Promise<any> {
     const { id_employee, address, latitude, longitude, photo, time } =
       createClockInDto;
 
     try {
-      // Verifikasi token (memeriksa apakah token valid secara kriptografis)
+      // Verifikasi token
       let decodedToken;
       try {
         decodedToken = this.jwtService.verify(token_auth); // Verifying JWT token
@@ -541,7 +541,7 @@ export class EmployeeService {
       // Cari employee berdasarkan id_employee
       const employee = await this.employeeRepository.findOne({
         where: { id_employee },
-        relations: ['company'], // Pastikan mengambil data company juga
+        relations: ['company', 'jobInformation'],
       });
 
       if (!employee) {
@@ -554,33 +554,28 @@ export class EmployeeService {
         throw new NotFoundException('Company not found for this employee');
       }
 
-      // --- Validasi absensi yang terlewat ---
       const currentDate = new Date(); // Tanggal saat ini
       const startOfDay = new Date(currentDate);
-      startOfDay.setHours(0, 0, 0, 0); // Mulai dari 00:00:00 hari ini
+      startOfDay.setHours(0, 0, 0, 0); // Mulai dari 00:00 hari ini
 
-      // Cari absensi terakhir karyawan
       const lastAttendance = await this.dailyAttendanceRepository.findOne({
         where: { employee: { id_employee } },
-        order: { created_at: 'DESC' }, // Dapatkan absensi terakhir
+        order: { created_at: 'DESC' },
       });
 
-      // Tentukan tanggal mulai pengecekan: jika ada absensi terakhir, mulai dari hari setelahnya
       const lastDate = lastAttendance
         ? new Date(lastAttendance.created_at)
-        : new Date(employee.created_at); // Jika tidak ada absensi, mulai dari tanggal employee dibuat
-      lastDate.setDate(lastDate.getDate() + 1); // Mulai dari hari setelah absensi terakhir
+        : new Date(employee.created_at);
+      lastDate.setDate(lastDate.getDate() + 1);
 
-      // Loop melalui semua hari dari lastDate hingga hari ini
-      let consecutiveAbsences = 0; // Counter untuk absen berturut-turut
-
+      // Loop untuk mengecek hari-hari yang absen
+      let consecutiveAbsences = 0;
       while (lastDate < startOfDay) {
         const startOfLastDate = new Date(lastDate);
-        startOfLastDate.setHours(0, 0, 0, 0); // Mulai dari 00:00 hari itu
+        startOfLastDate.setHours(0, 0, 0, 0);
         const endOfLastDate = new Date(lastDate);
-        endOfLastDate.setHours(23, 59, 59, 999); // Hingga 23:59 hari itu
+        endOfLastDate.setHours(23, 59, 59, 999);
 
-        // Cek apakah ada absensi di hari tersebut
         const attendance = await this.dailyAttendanceRepository.findOne({
           where: {
             employee: { id_employee },
@@ -588,42 +583,37 @@ export class EmployeeService {
           },
         });
 
-        // Jika tidak ada absensi, tandai sebagai alpha dan hitung absen berturut-turut
         if (!attendance) {
           const alphaAttendance = new DailyAttendance();
           alphaAttendance.employee = employee;
-          alphaAttendance.attend_status = 'A'; // A untuk Alpha
+          alphaAttendance.attend_status = 'A'; // Alpha untuk tidak hadir
           alphaAttendance.created_at = startOfLastDate;
           alphaAttendance.meal_money = 10000;
 
           await this.dailyAttendanceRepository.save(alphaAttendance);
 
-          consecutiveAbsences += 1; // Tambahkan ke counter absen berturut-turut
+          consecutiveAbsences += 1;
         } else {
-          consecutiveAbsences = 0; // Reset jika ada absen
+          consecutiveAbsences = 0; // Reset jika ada kehadiran
         }
-
-        // Pindah ke hari berikutnya
         lastDate.setDate(lastDate.getDate() + 1);
       }
 
-      // Jika absen berturut-turut lebih dari dua hari
       if (consecutiveAbsences > 2) {
         console.log('Karyawan tidak hadir lebih dari dua hari berturut-turut');
       }
 
-      // --- Validasi: Cek jika sudah ada clock in pada hari ini tanpa clock out ---
+      // --- Validasi Clock-In
       const endOfDay = new Date(currentDate);
-      endOfDay.setHours(23, 59, 59, 999); // Hingga 23:59:59 hari ini
+      endOfDay.setHours(23, 59, 59, 999);
       const existingAttendance = await this.dailyAttendanceRepository.findOne({
         where: {
-          created_at: Between(startOfDay, endOfDay), // Cek berdasarkan tanggal hari ini
-          clockOut: null, // Pastikan belum ada clock out
+          created_at: Between(startOfDay, endOfDay),
+          clockOut: null,
         },
-        relations: ['clockIn', 'clockIn.employee'], // Join relasi employee melalui clockIn
+        relations: ['clockIn', 'clockIn.employee'],
       });
 
-      // Cek apakah employee_id dari clockIn sesuai
       if (
         existingAttendance &&
         existingAttendance.clockIn &&
@@ -633,77 +623,160 @@ export class EmployeeService {
         throw new BadRequestException('You have already clocked in for today.');
       }
 
-      // Hitung jarak antara lokasi clock-in dan lokasi perusahaan
-      const distance = calculateDistance(
-        company.latitude,
-        company.longitude,
-        latitude,
-        longitude,
-      );
-
-      // Periksa apakah jarak dalam radius yang diizinkan (misal radius dalam meter)
-      if (distance > company.set_radius) {
-        throw new BadRequestException(
-          `Clock-in location is outside the allowed radius (${company.set_radius} meters)`,
-        );
-      }
-
-      // Hapus '/clockin/' dari nama file jika ada
-      const photoFileName = photo.replace('/clockin/', '');
-
-      // Path untuk gambar asli dan kompres
-      const originalPhotoPath = join(__dirname, '../../clockin', photoFileName);
-      const compressedPhotoPath = join(
-        __dirname,
-        '../../clockin',
-        `id_employee-${employee.id_employee}-${photoFileName}`,
-      );
-
-      // Kompres gambar menggunakan Sharp
-      await sharp(originalPhotoPath)
-        .resize(500) // Sesuaikan ukuran gambar, misalnya menjadi lebar 500px
-        .jpeg({ quality: 80 }) // Mengatur format menjadi JPEG dengan kualitas 80%
-        .toFile(compressedPhotoPath); // Simpan hasil kompresi ke path baru
-
-      // Hapus file foto asli setelah kompresi
-      if (fs.existsSync(originalPhotoPath)) {
-        await fs.remove(originalPhotoPath); // Menghapus file asli setelah kompresi
-      }
-
-      // Update nama file di database
-      employee.employee_photo = `id_employee-${employee.id_employee}-${photoFileName}`;
-      await this.employeeRepository.save(employee);
-
-      // Simpan clock-in jika jarak dalam radius
+      // Simpan clockIn data ke database
       const clockIn = new ClockIn();
       clockIn.address = address;
       clockIn.latitude = latitude;
       clockIn.longitude = longitude;
-      clockIn.attendance_photo = `id_employee-${employee.id_employee}-${photoFileName}`;
+      clockIn.attendance_photo = `id_employee-${employee.id_employee}-${photo}`;
       clockIn.created_at = new Date();
       clockIn.time = time;
       clockIn.employee = employee;
 
       await this.clockInRepository.save(clockIn);
 
-      // --- Menambahkan Data ke Tabel daily_attendance ---
+      // Simpan dailyAttendance
       const dailyAttendance = new DailyAttendance();
-
-      dailyAttendance.catering_fee = 1000; // Atur sesuai aturan perusahaan
-      dailyAttendance.meal_money = 10000; // Atur sesuai aturan perusahaan
-      dailyAttendance.overtime_total = 1 || 0; // Atur sesuai aturan perusahaan
-      dailyAttendance.created_at = new Date(); // Tanggal saat ini
-      dailyAttendance.clockIn = clockIn; // Simpan clockIn dengan waktu 'H'
+      dailyAttendance.catering_fee = 1000;
+      dailyAttendance.meal_money = 9000;
+      dailyAttendance.overtime_total_hour = 2.5;
+      dailyAttendance.created_at = currentDate;
+      dailyAttendance.clockIn = clockIn;
       dailyAttendance.employee = employee;
       dailyAttendance.attend_status = 'H';
-      // dailyAttendance.half_day = 0.5;
-
-      // Simpan record ke tabel daily_attendance
       await this.dailyAttendanceRepository.save(dailyAttendance);
+
+      // Perhitungan Slip Gaji
+      const attendanceRecords = await this.dailyAttendanceRepository.find({
+        where: { employee: { id_employee } },
+        select: ['meal_money', 'half_day', 'attend_status'],
+      });
+      // Menghitung total hari izin (permit)
+      const totalPermitDays = await this.dailyAttendanceRepository.count({
+        where: {
+          employee: { id_employee },
+          attend_status: 'I', // Menghitung hari dengan status 'I' (izin/permit)
+        },
+      });
+      const totalAlphaDays = await this.dailyAttendanceRepository.count({
+        where: {
+          employee: { id_employee },
+          attend_status: 'A', // Menghitung hari dengan status 'A' (alpha)
+        },
+      });
+
+      let totalOvertimeHours = 0;
+      let totalHalfDays = 0;
+      let totalMealMoney = 0;
+      let totalRegularDays = 0;
+      let totalMonthlyOvertime = 0;
+
+      attendanceRecords.forEach((record) => {
+        if (record.attend_status === 'H') {
+          totalRegularDays += 1;
+        }
+        totalOvertimeHours += record.overtime_total_hour || 0;
+        totalHalfDays += record.half_day || 0;
+        record.attend_status === 'H' && (totalMonthlyOvertime += 1);
+      });
+
+      totalMealMoney +=
+        totalRegularDays +
+        totalAlphaDays +
+        totalOvertimeHours +
+        totalOvertimeHours;
+
+      // Hitung gaji dan lembur
+      const dailyWage = 80000;
+      const baseWage = totalRegularDays * dailyWage;
+      const halfDayPay = totalHalfDays * (dailyWage / 2);
+      const overtimeRate = 10000;
+      const totalOvertimePay = totalOvertimeHours * overtimeRate;
+
+      const grandTotal =
+        baseWage + totalMealMoney + totalOvertimePay + halfDayPay;
+      const pph = grandTotal * 0.02;
+      const totalReceived = grandTotal - pph;
+
+      // Buat atau perbarui paySlip
+      const salaryPeriod = `${new Date().getFullYear()}-${new Date().getMonth() + 1}`;
+      let paySlip = await this.paySlipRepository.findOne({
+        where: {
+          employee: { id_employee },
+          salary_period: salaryPeriod,
+        },
+      });
+
+      if (!paySlip) {
+        paySlip = new PaySlip();
+        paySlip.employee = employee;
+        paySlip.salary_period = salaryPeriod;
+      }
+
+      paySlip.daily_wage = dailyWage;
+      paySlip.monthly_wage = baseWage;
+      paySlip.daily_wage_overtime = overtimeRate;
+      paySlip.overtime_total = totalOvertimePay;
+      paySlip.meal_money_total = totalMealMoney;
+      paySlip.grand_total = grandTotal;
+      paySlip.pph = pph;
+      paySlip.total_received = totalReceived;
+
+      await this.paySlipRepository.save(paySlip);
+      const totalCateringDeduction =
+        totalRegularDays + totalHalfDays + totalOvertimeHours;
+
+      const totalWork =
+        totalRegularDays +
+        totalMonthlyOvertime +
+        totalHalfDays +
+        totalAlphaDays +
+        totalPermitDays;
+      const attendTotal =
+        totalRegularDays + totalMonthlyOvertime + totalHalfDays;
+      let monthlyAttendance = await this.monthlyAttendanceRepository.findOne({
+        where: {
+          employee: employee,
+          salary_period: salaryPeriod,
+        },
+      });
+
+      if (!monthlyAttendance) {
+        monthlyAttendance = new MonthlyAttendance();
+        monthlyAttendance.employee = employee;
+        monthlyAttendance.salary_period = salaryPeriod;
+        monthlyAttendance.total_hour_overtime = 0;
+      }
+
+      monthlyAttendance.alpha = totalAlphaDays;
+      monthlyAttendance.permit = totalPermitDays;
+      monthlyAttendance.attend = totalRegularDays;
+      monthlyAttendance.total_hour_overtime +=
+        dailyAttendance.overtime_total_hour || 0;
+      monthlyAttendance.catering_deduction = totalCateringDeduction;
+      monthlyAttendance.meal_money = totalMealMoney;
+      monthlyAttendance.half_day = totalHalfDays;
+      monthlyAttendance.attend_total = attendTotal;
+      monthlyAttendance.work_total = totalWork;
+      monthlyAttendance.overtime = totalMonthlyOvertime;
+      monthlyAttendance.paySlip = paySlip;
+
+      await this.monthlyAttendanceRepository.save(monthlyAttendance);
 
       return {
         statusCode: 201,
         status: 'success',
+        data: {
+          employee: employee.employee_name,
+          department: employee.jobInformation
+            ? employee.jobInformation.user_department
+            : 'Department not found',
+          position: employee.jobInformation
+            ? employee.jobInformation.user_position
+            : 'Position not found',
+          date: currentDate.toISOString().split('T')[0],
+          time: currentDate.toTimeString().split(' ')[0],
+        },
         message: 'Successfully clocked in',
       };
     } catch (error) {
@@ -716,7 +789,6 @@ export class EmployeeService {
         throw error;
       }
 
-      // Tangkap error lain
       throw new InternalServerErrorException('Error clocking in');
     }
   }
@@ -747,7 +819,7 @@ export class EmployeeService {
       // 2. Cari employee berdasarkan id_employee
       const employee = await this.employeeRepository.findOne({
         where: { id_employee },
-        relations: ['company'], // Pastikan mengambil data company juga
+        relations: ['company', 'jobInformation'], // Pastikan mengambil data company juga
       });
 
       if (!employee) {
@@ -853,6 +925,17 @@ export class EmployeeService {
       return {
         statusCode: 201,
         status: 'success',
+        data: {
+          employee: employee.employee_name,
+          department: employee.jobInformation
+            ? employee.jobInformation.user_department
+            : 'Department not found',
+          position: employee.jobInformation
+            ? employee.jobInformation.user_position
+            : 'Position not found',
+          date: currentDate.toISOString().split('T')[0],
+          time: currentDate.toTimeString().split(' ')[0],
+        },
         message: 'Successfully clocked out',
       };
     } catch (error) {
@@ -2059,6 +2142,7 @@ export class EmployeeService {
       // Verifikasi token
       let decodedToken;
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         decodedToken = this.jwtService.verify(token_auth);
       } catch (error) {
         if (error.name === 'JsonWebTokenError') {
@@ -2166,14 +2250,14 @@ export class EmployeeService {
       monthlyAttendance.attend = totalPresent; // Total kehadiran penuh
       monthlyAttendance.alpha = parseFloat(dailyAttendance.alpha_days) || 0; // Total hari alpha
       monthlyAttendance.permit = totalPermit; // Total hari izin
-      monthlyAttendance.overtime_total = totalOvertime; // Total overtime
+      monthlyAttendance.total_hour_overtime = totalOvertime; // Total overtime
       monthlyAttendance.half_day = totalHalfDays; // Total half-day
 
       // Total jam kerja dihitung dari hadir penuh + half-day + izin + overtime
       monthlyAttendance.attend_total =
         totalPresent + totalHalfDays + overtimeInDays;
 
-      // Bulatkan ke 2 desimal jika total_hours adalah jam
+      // Bulatkan ke 2 desimal
       monthlyAttendance.attend_total =
         Math.round(monthlyAttendance.attend_total * 100) / 100;
 
@@ -2187,7 +2271,7 @@ export class EmployeeService {
           days_present: totalPresent,
           alpha_days: monthlyAttendance.alpha || 0,
           permit_days: totalPermit,
-          overtime_total: monthlyAttendance.overtime_total || 0,
+          overtime_total: monthlyAttendance.total_hour_overtime || 0,
           half_days: totalHalfDays || 0,
           attend_total: monthlyAttendance.attend_total || 0,
         },
@@ -2321,7 +2405,7 @@ export class EmployeeService {
       const monthlyAttendnce = new MonthlyAttendance();
       const dailyWage = 150000; // Upah per hari
       const baseWage = dailyWage * dailyAttendance.days_present; //upah poko bulanan
-      const totalOvertimeHours = monthlyAttendance.overtime_total || 0;
+      const totalOvertimeHours = monthlyAttendance.total_hour_overtime || 0;
       const overtimeRate = 12000; // Upah lembur per jam
       const overtimePay = totalOvertimeHours * overtimeRate;
       const mealAllowance = 12000 * dailyAttendance.days_present;

@@ -7,7 +7,6 @@ import {
   ManyToOne,
   OneToMany,
   CreateDateColumn,
-  UpdateDateColumn,
 } from 'typeorm';
 import { Company } from 'src/company/entities/company.entity';
 import { GeneralInformation } from 'src/general_inforamtion/entities/general_inforamtion.entity';
@@ -117,8 +116,4 @@ export class Employee {
   // Kolom created_at yang otomatis diisi saat record baru ditambahkan
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
-
-  // Kolom updated_at yang otomatis diupdate saat record diubah
-  @UpdateDateColumn({ type: 'timestamp' })
-  updated_at: Date;
 }
