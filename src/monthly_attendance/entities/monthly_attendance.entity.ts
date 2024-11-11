@@ -1,4 +1,3 @@
-import { DailyAttendance } from 'src/daily_attendance/entities/daily_attendance.entity';
 import { Employee } from 'src/employee/entities/employee.entity';
 import { PaySlip } from 'src/pay_slip/entities/pay-slip.entity';
 import {
@@ -47,12 +46,6 @@ export class MonthlyAttendance {
 
   @Column({ type: 'integer' })
   overtime: number;
-
-  @OneToOne(
-    () => DailyAttendance,
-    (dailyAttendance) => dailyAttendance.monthlyAttendance,
-  )
-  dailyAttendance: DailyAttendance;
 
   // Tambahkan relasi Many-to-One ke Employee
   @OneToOne(() => Employee, (employee) => employee.monthlyAttendance)

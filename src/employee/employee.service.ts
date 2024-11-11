@@ -2120,11 +2120,31 @@ export class EmployeeService {
         throw new NotFoundException('Employee not found');
       }
 
-      // Ambil periode absensi berdasarkan bulan dan tahun
-      const startPeriod = new Date(`${year}-${month}-01`); // Tanggal mulai bulan
-      const endPeriod = new Date(startPeriod);
-      endPeriod.setMonth(endPeriod.getMonth() + 1);
-      endPeriod.setDate(0); // Tanggal akhir bulan
+      // Ambil informasi dari company terkait
+      const company = employee.company;
+
+      // Variabel untuk periode absensi
+      let startPeriod: Date;
+      let endPeriod: Date;
+      let attendanceType: string;
+
+      // Cek apakah start_period_attendance dan end_period_attendance kosong/null
+      if (!company.start_period_attendance || !company.end_period_attendance) {
+        // Jika kosong, gunakan monthly_fixed
+        startPeriod = new Date(year, month - 1, 1); // Awal bulan
+        endPeriod = new Date(year, month, 0); // Hari terakhir bulan
+        attendanceType = 'monthly_fixed';
+      } else {
+        // Jika ada nilai di start_period_attendance dan end_period_attendance, gunakan custom_period
+        startPeriod = new Date(company.start_period_attendance);
+        endPeriod = new Date(company.end_period_attendance);
+        attendanceType = 'custom_period';
+      }
+
+      // Logging tipe absensi untuk debugging
+      console.log('Attendance type:', attendanceType);
+      console.log('Start period:', startPeriod);
+      console.log('End period:', endPeriod);
 
       // Query untuk menghitung jumlah kehadiran, alpha, izin, overtime_total, dan half_day
       const dailyAttendance = await this.dailyAttendanceRepository
@@ -2192,14 +2212,15 @@ export class EmployeeService {
       const attendTotal =
         (parseFloat(dailyAttendance.days_present) || 0) +
         (parseFloat(dailyAttendance.alpha_days) || 0) +
-        (parseFloat(dailyAttendance.days_present) || 0);
+        (parseFloat(dailyAttendance.days_present) || 0) +
+        (parseFloat(dailyAttendance.half_days) || 0);
 
       const totalWork =
         attendTotal +
-          (parseFloat(dailyAttendance.permit_days) || 0) +
-          totalHalfDay +
-          parseFloat(dailyAttendance.overtime_total) ||
-        0 + (parseFloat(dailyAttendance.alpha_days) || 0);
+        (parseFloat(dailyAttendance.permit_days) || 0) +
+        (parseFloat(dailyAttendance.half_days) || 0) +
+        (parseFloat(dailyAttendance.overtime_total) || 0) +
+        (parseFloat(dailyAttendance.alpha_days) || 0);
 
       const totalHourMonthlyOvertime =
         parseFloat(dailyAttendance.overtime_total) || 0;

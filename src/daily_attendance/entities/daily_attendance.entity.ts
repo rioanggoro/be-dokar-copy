@@ -46,11 +46,4 @@ export class DailyAttendance {
   @OneToOne(() => Employee, (employee) => employee.dailyAttendance)
   @JoinColumn({ name: 'employee_id' })
   employee: Employee;
-
-  @ManyToOne(
-    () => MonthlyAttendance,
-    (monthlyAttendance) => monthlyAttendance.dailyAttendance,
-  )
-  @JoinColumn({ name: 'monthly_attendance_id' })
-  monthlyAttendance: MonthlyAttendance;
 }
