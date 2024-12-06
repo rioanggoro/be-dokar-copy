@@ -2305,16 +2305,18 @@ export class EmployeeService {
       let paySlip = await this.paySlipRepository.findOne({
         where: {
           employee: { id_employee },
+          salary_period: salaryPeriod, // Pastikan kita mencari berdasarkan salary_period
         },
       });
 
+      // Jika paySlip belum ada untuk periode ini, buat entri baru
       if (!paySlip) {
-        // Jika paySlip belum ada, buat entri baru
-        paySlip = new PaySlip();
+        paySlip = new PaySlip(); // Inisialisasi paySlip baru
         paySlip.employee = employee;
+        paySlip.salary_period = salaryPeriod; // Set periode gaji
       }
 
-      // Ambil data monthlyAttendance dan hitung komponen upah
+      // Ambil data dailyAttendance dan hitung komponen upah
       const startPeriod = new Date(`${year}-${month}-01`);
       const endPeriod = new Date(startPeriod);
       endPeriod.setMonth(endPeriod.getMonth() + 1);
@@ -2376,13 +2378,11 @@ export class EmployeeService {
       }
 
       const dailyWage = 150000; // Upah per hari
-      const baseWage = dailyWage * dailyAttendance.days_present; //upah poko bulanan
+      const baseWage = dailyWage * dailyAttendance.days_present; // Upah pokok bulanan
       const overtimeRate = 12000; // Upah lembur per jam
       const totalOvertimeHours = monthlyAttendance.total_hour_overtime || 0;
       const overtimePay = totalOvertimeHours * overtimeRate;
       const totalMealMoneyPay = 12000 * monthlyAttendance.work_total;
-      // const halfDayPay =
-      //   (parseFloat(dailyAttendance.half_days) || 0) * (dailyWage / 1); // Half-day pay
 
       const totalMealMoney = totalMealMoneyPay || 0;
       const totalOvertimePay = overtimePay || 0;
@@ -2402,6 +2402,7 @@ export class EmployeeService {
       paySlip.total_salary_minus_meals = grandTotal - totalMealMoney;
       paySlip.pph = pph;
       paySlip.total_received = totalReceived;
+      paySlip.salary_period = salaryPeriod;
 
       await this.paySlipRepository.save(paySlip); // Simpan atau update paySlip
 
